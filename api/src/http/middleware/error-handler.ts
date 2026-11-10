@@ -1,7 +1,17 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
-import { ZodError } from 'zod';
+import type { ZodError } from 'zod';
 import { AppError, toProblem } from '../../lib/problem';
 import { translateDbError } from '../../lib/db-errors';
+
+/** Duck typing: @treo/shared puede traer su propia copia de zod. */
+function isZodError(err: unknown): err is ZodError {
+  return (
+    !!err &&
+    typeof err === 'object' &&
+    (err as { name?: unknown }).name === 'ZodError' &&
+    Array.isArray((err as { issues?: unknown }).issues)
+  );
+}
 
 function requestIdOf(req: { id?: unknown }): string {
   return String(req.id ?? '');
@@ -16,7 +26,7 @@ export const problemHandler: ErrorRequestHandler = (err, req, res, _next) => {
   let appError: AppError;
   if (err instanceof AppError) {
     appError = err;
-  } else if (err instanceof ZodError) {
+  } else if (isZodError(err)) {
     appError = new AppError('VALIDATION_ERROR', 400, 'La solicitud contiene datos inválidos', {
       errors: err.issues.map((i) => ({ path: i.path.join('.'), message: i.message })),
     });

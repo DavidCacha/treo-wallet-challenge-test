@@ -56,6 +56,7 @@ const envSchema = z.object({
     ),
   LOGIN_RATE_LIMIT_MAX: positiveInt.default(5),
   LOGIN_RATE_LIMIT_WINDOW_MS: positiveInt.default(900_000),
+  AUTH_RATE_LIMIT_MAX: positiveInt.default(30),
 });
 
 export type AppConfig = z.infer<typeof envSchema>;

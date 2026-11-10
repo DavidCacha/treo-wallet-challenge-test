@@ -9,6 +9,7 @@ const defaults: Record<string, string> = {
   JWT_SECRET: 'test-only-jwt-secret-0123456789abcdef0123456789',
   OTP_PEPPER: 'test-only-otp-pepper-0123456789abcdef0123456789',
   COOKIE_SECURE: 'true',
+  AUTH_RATE_LIMIT_MAX: '100000',
 };
 for (const [k, v] of Object.entries(defaults)) {
   if (process.env[k] === undefined) process.env[k] = v;
