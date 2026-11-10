@@ -36,6 +36,7 @@ export function createDataSource({ url, poolMax = 20 }: DataSourceOptions): Data
     migrations: MIGRATIONS,
     migrationsTableName: 'typeorm_migrations',
     synchronize: false, // obligatorio: el esquema solo cambia con migraciones
+    installExtensions: false, // las extensiones se crean en migraciones, no al conectar
     migrationsRun: false,
     logging: false,
     extra: { max: poolMax, application_name: 'treo-api' },

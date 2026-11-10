@@ -180,7 +180,7 @@ erDiagram
 
 Roles de base de datos:
 - `treo_owner`: dueño del esquema; corre migraciones; dueño de funciones `SECURITY DEFINER`.
-- `treo_app`: rol de la API en tiempo de ejecución. `SELECT, INSERT` en todas las tablas de negocio; `UPDATE` solo en columnas explícitas (`transfers.status, rejection_code, completed_at, counts_toward_limit`, `otp_challenges.attempts, consumed_at`, `refresh_tokens.revoked_at, replaced_by_id`, `accounts.name, status`, `users.full_name, updated_at`); sin `DELETE` salvo en `beneficiaries` (no expuesto aún); nada sobre `audit_events` excepto `INSERT`.
+- `treo_app`: rol de la API en tiempo de ejecución. `SELECT, INSERT` en todas las tablas de negocio; `UPDATE` solo en columnas explícitas (`transfers.status, rejection_code, completed_at`, `otp_challenges.attempts, consumed_at`, `refresh_tokens.revoked_at, replaced_by_id`, `accounts.name, status`, `users.full_name, updated_at`); sin `DELETE` salvo en `beneficiaries` (no expuesto aún); nada sobre `audit_events` excepto `INSERT`.
 
 ### 3.3 Índices
 
@@ -993,7 +993,68 @@ LIMIT $7 + 1;                                           -- +1 para saber si hay 
 
 Los datos de contraparte, concepto y referencia se obtienen con un `JOIN` a `transfers` sobre los ≤ 101 ids de la página. Cursor = `base64url(JSON {created_at, id})`, validado con Zod al decodificar.
 
-> **Pendiente (T-17):** el `EXPLAIN (ANALYZE, BUFFERS)` real con ≥ 100,000 movimientos de seed se pegará aquí cuando exista la implementación. Plan esperado: `Index Scan` (o `Index Only Scan` en la parte de `ledger_entries`) sobre `ledger_entries (account_id, created_at DESC, id DESC)` y `Limit` sin `Sort` ni `Seq Scan`. Si el plan real difiere, se documentará el ajuste aplicado.
+### 10.1 Resultados con el seed (T-17)
+
+Medido el 2026-11-10 en PostgreSQL 16.15 local, después de `npm run db:seed` y `ANALYZE`:
+`ledger_entries` con **120,016 asientos**, de los cuales **60,001** pertenecen a la cuenta consultada
+(`historial@treo.dev`, cuenta Principal). Consultas ejecutadas con el rol `treo_app`.
+
+**1) Primera página, sin filtros** (`LIMIT 21` = 20 + 1 para saber si hay `next_cursor`):
+
+```text
+ Limit (actual time=0.053..0.057 rows=21 loops=1)
+   Buffers: shared hit=4
+   ->  Index Only Scan using ledger_entries_history_idx on ledger_entries le (actual time=0.052..0.054 rows=21 loops=1)
+         Index Cond: (account_id = '14f093cd-0126-4a14-8c16-0c24f1c5aff6'::uuid)
+         Heap Fetches: 0
+         Buffers: shared hit=4
+ Planning Time: 0.318 ms
+ Execution Time: 0.093 ms
+```
+
+**2) Filtro de fechas (septiembre en America/Mexico_City) + tipo `TRANSFER_IN`:**
+
+```text
+ Limit (actual time=0.021..0.051 rows=21 loops=1)
+   Buffers: shared hit=5
+   ->  Index Only Scan using ledger_entries_history_idx on ledger_entries le (actual time=0.021..0.049 rows=21 loops=1)
+         Index Cond: ((account_id = '14f093cd-…'::uuid) AND (created_at >= '2026-09-01 06:00:00+00'::timestamp with time zone) AND (created_at < '2026-10-01 06:00:00+00'::timestamp with time zone))
+         Filter: (entry_type = 'TRANSFER_IN'::entry_type)
+         Rows Removed by Filter: 20
+         Heap Fetches: 0
+         Buffers: shared hit=5
+ Planning Time: 0.213 ms
+ Execution Time: 0.062 ms
+```
+
+**3) Página intermedia por cursor (keyset, sin `OFFSET`):**
+
+```text
+ Limit (actual time=0.020..0.024 rows=21 loops=1)
+   Buffers: shared hit=4
+   ->  Index Only Scan using ledger_entries_history_idx on ledger_entries le (actual time=0.020..0.022 rows=21 loops=1)
+         Index Cond: ((account_id = '14f093cd-…'::uuid) AND (ROW(created_at, id) < ROW('2026-07-01 00:00:00+00'::timestamp with time zone, '9223372036854775807'::bigint)))
+         Heap Fetches: 0
+         Buffers: shared hit=4
+ Execution Time: 0.040 ms
+```
+
+**4) Consulta completa del endpoint** (`MOVEMENTS_SQL`, con los `JOIN` de detalle): la CTE de página
+usa el mismo `Index Only Scan` (4 buffers) y los `JOIN` solo recorren las 21 filas de la página con
+búsquedas por llave primaria (`transfers_pkey`, `ledger_entries_transfer_idx`, `accounts_pkey`).
+Tiempo total: **0.725 ms** (planificación 1.565 ms). Los únicos `Seq Scan` son sobre `users` y
+`beneficiaries`, que en el seed tienen 3 y 2 filas; con tablas grandes el planificador cambia a sus índices.
+
+**Conclusión:** el índice `(account_id, created_at DESC, id DESC) INCLUDE (entry_type, amount_cents,
+balance_after_cents, transfer_id)` resuelve la página sin `Sort`, sin `Seq Scan` sobre `ledger_entries`
+y sin visitar el heap (`Heap Fetches: 0`); el costo no depende de cuántos movimientos tenga la cuenta.
+El filtro por `entry_type` se evalúa dentro del índice gracias al `INCLUDE`.
+
+**Ajuste descubierto durante el seed:** insertar 60,000 transferencias de la misma cuenta en una sola
+transacción tardó 7.5 min, porque el trigger de saldo actualiza la misma fila de `accounts` decenas de
+miles de veces dentro de una transacción y cada `UPDATE` recorre las versiones previas de la fila. En
+lotes de 1,000 transferencias el seed completo tarda ~16 s. En la operación normal de la API cada
+transferencia es su propia transacción, por lo que no aplica.
 
 ## 11. Mapa de pantallas y estados
 
