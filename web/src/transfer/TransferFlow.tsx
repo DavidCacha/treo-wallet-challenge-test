@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { CreateTransferRequest } from '../api/types';
 
@@ -46,13 +46,44 @@ export function newIdempotencyKey(): string {
 }
 
 /**
+ * El intento se guarda en sessionStorage (solo datos de la transferencia, nunca
+ * tokens) para que, si el usuario recarga la página tras un error de red, el
+ * reintento siga usando la MISMA llave y no se duplique la operación (§5.3).
+ */
+export const ATTEMPT_STORAGE_KEY = 'treo.transfer-attempt';
+
+function loadAttempt(): TransferAttempt | null {
+  try {
+    const raw = sessionStorage.getItem(ATTEMPT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as TransferAttempt;
+    return typeof parsed.idempotencyKey === 'string' && parsed.draft?.payload ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveAttempt(attempt: TransferAttempt | null): void {
+  try {
+    if (attempt) sessionStorage.setItem(ATTEMPT_STORAGE_KEY, JSON.stringify(attempt));
+    else sessionStorage.removeItem(ATTEMPT_STORAGE_KEY);
+  } catch {
+    // Sin almacenamiento (modo privado estricto): el intento vive solo en memoria.
+  }
+}
+
+/**
  * R4.14: la llave se genera UNA vez por intento, al pasar del formulario a la
  * pantalla de confirmación, y se reutiliza en cada reintento de ese intento.
  * "Editar" o "Corregir" terminan el intento: el siguiente envío lleva otra llave.
  */
 export function TransferFlowProvider({ children }: { children: ReactNode }) {
-  const [attempt, setAttempt] = useState<TransferAttempt | null>(null);
-  const [lastValues, setLastValues] = useState<TransferFormValues | null>(null);
+  const [attempt, setAttempt] = useState<TransferAttempt | null>(loadAttempt);
+  const [lastValues, setLastValues] = useState<TransferFormValues | null>(
+    () => loadAttempt()?.draft.values ?? null,
+  );
+
+  useEffect(() => saveAttempt(attempt), [attempt]);
 
   const startAttempt = useCallback((draft: TransferDraft) => {
     setLastValues(draft.values);

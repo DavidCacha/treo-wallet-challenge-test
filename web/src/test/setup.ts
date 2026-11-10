@@ -9,5 +9,6 @@ afterEach(() => {
   cleanup();
   server.resetHandlers();
   setAccessToken(null);
+  sessionStorage.clear();
 });
 afterAll(() => server.close());

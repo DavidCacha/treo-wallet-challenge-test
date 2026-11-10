@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { LoginInput } from '@treo/shared';
 import * as api from '../api/endpoints';
 import { getAccessToken, onAccessTokenChange, refreshAccessToken } from '../api/session';
+import { ATTEMPT_STORAGE_KEY } from '../transfer/TransferFlow';
 
 type Status = 'checking' | 'authenticated' | 'anonymous';
 
@@ -53,6 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await api.logout();
     } finally {
       queryClient.clear();
+      try {
+        sessionStorage.removeItem(ATTEMPT_STORAGE_KEY);
+      } catch {
+        // sin almacenamiento disponible
+      }
       setStatus('anonymous');
     }
   }, [queryClient]);

@@ -158,6 +158,29 @@ describe('Flujo de transferencia web [R4.5, R4.14, R4.15, R6.3, EC-1, EC-3]', ()
     expect(calls[1]!.body).toEqual(calls[0]!.body);
   });
 
+  it('si se recarga la página tras un error de red, el reintento conserva la llave', async () => {
+    const t = transfer();
+    serveTransfer(t);
+    const calls = transfersEndpoint((n) =>
+      n === 1 ? HttpResponse.error() : HttpResponse.json(t, { status: 201 }),
+    );
+    const user = userEvent.setup();
+    await goToReview(user);
+    await user.click(screen.getByRole('button', { name: 'Enviar' }));
+    await screen.findByRole('button', { name: 'Reintentar envío' });
+
+    // "Recarga": se desmonta toda la app y se vuelve a montar en la misma ruta.
+    rendered!.unmount();
+    rendered = renderApp('/transfer/review');
+    await user.click(await screen.findByRole('button', { name: 'Enviar' }));
+    await screen.findByRole('heading', { name: 'Transferencia completada' });
+
+    expect(calls).toHaveLength(2);
+    expect(calls[1]!.key).toBe(calls[0]!.key);
+    // Con la transferencia creada, el intento se borra.
+    expect(sessionStorage.getItem('treo.transfer-attempt')).toBeNull();
+  });
+
   it('503 TRY_AGAIN también se reintenta con la misma llave', async () => {
     const t = transfer();
     serveTransfer(t);
