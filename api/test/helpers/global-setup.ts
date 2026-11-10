@@ -9,7 +9,7 @@ import { createDataSource } from '../../src/db/data-source';
 export default async function setup(): Promise<void> {
   const url =
     process.env.TEST_DATABASE_MIGRATION_URL ??
-    'postgres://treo_owner:treo_owner_dev@localhost:5432/treo_test';
+    'postgres://treo_owner:treo_owner_dev@localhost:5433/treo_test';
   const ds = createDataSource({ url, poolMax: 1 });
   await ds.initialize();
   try {
