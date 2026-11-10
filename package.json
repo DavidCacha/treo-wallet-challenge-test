@@ -1,0 +1,34 @@
+{
+  "name": "treo-wallet",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Billetera digital MXN (prueba técnica Treo): API, web y móvil",
+  "workspaces": [
+    "packages/shared",
+    "api"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run build -w @treo/shared && npm run build -w @treo/api",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "dev": "npm run dev -w @treo/api",
+    "db:migrate": "npm run db:migrate -w @treo/api",
+    "db:migrate:revert": "npm run db:migrate:revert -w @treo/api",
+    "db:seed": "npm run db:seed -w @treo/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "@types/node": "^20.17.6",
+    "eslint": "^9.15.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.15.0",
+    "vitest": "^2.1.5"
+  }
+}
