@@ -105,11 +105,58 @@ Los errores 1 a 7 los encontró la propia AI (con pruebas o al revisar su códig
 - **CI (T-29):** aún no existe el pipeline. Se hará cuando existan `web` y `mobile`, como indica `tasks.md`.
 - **Revisión humana del código:** pendiente.
 
+## Fase 3a — Web (2026-11-10)
+
+### Herramienta y modo
+
+Claude Code (Anthropic) en la misma sesión en la nube, siguiendo `tasks.md` de T-18 a T-24 con un commit por tarea. Después de cada tarea la AI corrió `tsc`, ESLint, Prettier y las pruebas de la web.
+
+### Prompt clave (escrito por el candidato)
+
+Resumen fiel:
+
+> Continuar con la Fase 3 empezando solo por el frontend web en React. Implementar todas las pantallas y funcionalidades web obligatorias del documento original con React, TypeScript y Vite, según las specs aprobadas. Consumir los endpoints reales del backend y compartir tipos y validaciones. Implementar estados de carga, vacío y error; paginación por cursor; confirmación y comprobante de transferencia; y pruebas con Testing Library. La llave de idempotencia debe generarse una sola vez por intento de transferencia. Mantener la trazabilidad de `tasks.md` y commits separados. Actualizar `ai-log.md` y reportar las pruebas realmente ejecutadas. No implementar todavía la app móvil.
+
+### Errores de la AI detectados y corregidos
+
+Todos los encontró la propia AI antes de abrir el PR. **El candidato todavía no ha revisado el código de la Fase 3.**
+
+| # | Qué hizo mal la AI | Cómo se detectó | Corrección |
+| --- | --- | --- | --- |
+| 1 | Tras un `201`, la pantalla de confirmación borraba el intento y **redirigía al formulario en lugar del comprobante**. React aplicaba el borrado del intento antes que la navegación, que corre como transición. Las pruebas de ese momento no cubrían el camino completo. | Prueba en navegador contra la API local: la transferencia sí se creó (201), pero la pantalla volvió al formulario. | Se marca el intento como terminado antes de navegar. Las pruebas de T-24 cubren ahora la llegada al comprobante. |
+| 2 | La primera versión guardaba la llave **solo en memoria**. Si el usuario recargaba tras un error de red y volvía a capturar, se generaba otra llave y la transferencia podía duplicarse. `design.md` §5.3 pide conservarla hasta un resultado definitivo. | Revisión propia al redactar esta bitácora. | El intento (cuerpo + llave, sin tokens) se guarda en `sessionStorage` y se borra al tener resultado, al editar o al cerrar sesión. Se agregó una prueba que simula la recarga. |
+| 3 | Detalles menores: dos copias de Vite con tipos incompatibles por fijar una versión exacta y un caso de prueba que no probaba nada (el campo limita a 7 caracteres, así que escribir 8 dígitos daba una referencia válida). | Errores de `tsc` y una prueba que falló. | Se alineó la versión de Vite y se corrigió el caso. |
+
+### Decisiones tomadas por la AI (pendientes de revisión del candidato)
+
+| Decisión | Motivo |
+| --- | --- |
+| La llave se genera al pasar del formulario a la confirmación (no al montar la pantalla). | Es el mismo momento que pide R4.14 y evita depender de efectos que React ejecuta dos veces en modo estricto. |
+| En desarrollo, Vite redirige `/api` a la API. | La cookie del refresh (`Path=/api/v1/auth`, `SameSite=Strict`) queda en el mismo origen sin configurar CORS con credenciales. |
+| La web consume el código fuente TypeScript de `@treo/shared` (alias de Vite) en lugar del `dist` CommonJS. | Mismas reglas de CLABE, montos y esquemas que la API, sin un paso de compilación extra. |
+| Un rechazo de negocio no ofrece "Reintentar", solo "Corregir datos" (con llave nueva). | La llave ya quedó consumida por el rechazo; reenviarla devolvería el mismo resultado. Los errores de red y `5xx` sí se reintentan con la misma llave. |
+| Se agregó una guardia síncrona además del botón deshabilitado. | Evita dos envíos aunque lleguen dos clics antes de que React vuelva a pintar. |
+
+### Pruebas realmente ejecutadas
+
+- **Vitest + Testing Library + MSW (`npm test -w @treo/web`): 46 pruebas en verde** en 7 archivos: sesión y *single-flight* (5), `RequireAuth` (2), login y registro (9), cuentas (4), historial (6), beneficiarios (6) y flujo de transferencia (14).
+- Se verificó que las pruebas del flujo fallan si se quita la guardia de doble clic o si se genera una llave nueva en cada envío.
+- **Prueba en navegador contra la API real** (Chromium con Playwright, API y PostgreSQL 16 locales, usuario demo): login y sesión tras recargar (cookie `HttpOnly`, `SameSite=Strict`, nada en `localStorage`/`sessionStorage`), transferencia completada con doble clic (1 sola petición `POST /transfers`, el saldo bajó $50.00), OTP inválido (quedan 2 intentos) y válido, `100.005` rechazado sin enviar, saldo insuficiente (mensaje, sin comprobante), historial con filtro en la URL, "Cargar más" con el usuario `historial@` (20 → 40) y rango vacío, CLABE con dígito erróneo y CLABE externa, logout. Lo hizo la AI con un script; no es una revisión del candidato.
+- **axe-core 4.10 (WCAG 2 A/AA)** en login, registro, cuentas, historial, beneficiarios y transferencia (con errores de validación visibles): sin violaciones. Incluye contraste de color.
+- Durante esas corridas, el login de `ana@` empezó a fallar tras varios intentos: era el rate limit de R1.6 (5 por 15 min). Se reinició la API para continuar.
+- `npm run lint`, `npm run typecheck` y `npm run build -w @treo/web` pasan.
+
+### Qué no se pudo verificar
+
+- **Navegadores distintos de Chromium** (Firefox, Safari): no se probaron.
+- **Lector de pantalla real:** solo se revisó con axe-core y con navegación por teclado en las pruebas; no se probó con NVDA ni VoiceOver.
+- **En la máquina del candidato:** pendiente.
+
 ## Fases siguientes
 
 | Fase | Estado |
 | --- | --- |
-| Fase 3 — Web y móvil | Pendiente |
+| Fase 3b — Móvil | Pendiente |
 | Fase 4 — Propuesta AWS | Pendiente |
 
 Plantilla para cada entrada futura:
