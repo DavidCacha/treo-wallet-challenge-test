@@ -14,6 +14,7 @@ import { accountsRouter } from './modules/accounts/accounts.controller';
 import { BeneficiariesService } from './modules/beneficiaries/beneficiaries.service';
 import { beneficiariesRouter } from './modules/beneficiaries/beneficiaries.controller';
 import { TransfersService } from './modules/transfers/transfers.service';
+import { transfersRouter } from './modules/transfers/transfers.controller';
 
 export interface Services {
   audit: AuditService;
@@ -54,6 +55,7 @@ export function buildApp(
       auth,
       accountsRouter(services.accounts, requireAuth),
       beneficiariesRouter(services.beneficiaries, requireAuth),
+      transfersRouter(services.transfers, requireAuth),
     ],
   });
   return { app, services };

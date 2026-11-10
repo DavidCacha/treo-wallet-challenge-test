@@ -573,6 +573,11 @@ paths:
       operationId: createTransfer
       tags: [transfers]
       summary: Crea una transferencia (idempotente)
+      description: |
+        Repetir la petición con la misma Idempotency-Key y el mismo cuerpo no vuelve a
+        ejecutar nada: responde el estado actual de la misma transferencia (201 COMPLETED,
+        202 PENDING_OTP, 422 REJECTED/EXPIRED) con el encabezado Idempotent-Replayed: true.
+        La misma llave con otro cuerpo responde 422 IDEMPOTENCY_KEY_REUSED.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -598,7 +603,13 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '422': { $ref: '#/components/responses/BusinessRuleViolation' }
+        '422':
+          description: Regla de negocio incumplida (incluye la transferencia REJECTED/EXPIRED cuando aplica)
+          headers:
+            Idempotent-Replayed: { $ref: '#/components/headers/IdempotentReplayed' }
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
   /transfers/{transferId}:
     get:
