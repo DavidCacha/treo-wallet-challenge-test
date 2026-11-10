@@ -20,7 +20,7 @@
     "db:migrate": "npm run db:migrate -w @treo/api",
     "db:migrate:revert": "npm run db:migrate:revert -w @treo/api",
     "db:seed": "npm run db:seed -w @treo/api",
-    "lint:openapi": "redocly lint packages/shared/openapi.yaml",
+    "lint:openapi": "REDOCLY_TELEMETRY=off REDOCLY_SUPPRESS_UPDATE_NOTICE=true redocly lint packages/shared/openapi.yaml",
     "gen:types": "npm run gen:types -w @treo/shared"
   },
   "devDependencies": {
