@@ -11,12 +11,15 @@ import { authRouter } from './modules/auth/auth.controller';
 import { authenticate } from './http/middleware/authenticate';
 import { AccountsService } from './modules/accounts/accounts.service';
 import { accountsRouter } from './modules/accounts/accounts.controller';
+import { BeneficiariesService } from './modules/beneficiaries/beneficiaries.service';
+import { beneficiariesRouter } from './modules/beneficiaries/beneficiaries.controller';
 
 export interface Services {
   audit: AuditService;
   tokens: TokenService;
   auth: AuthService;
   accounts: AccountsService;
+  beneficiaries: BeneficiariesService;
 }
 
 export function buildServices(ds: DataSource, config: AppConfig, _logger: Logger): Services {
@@ -24,7 +27,8 @@ export function buildServices(ds: DataSource, config: AppConfig, _logger: Logger
   const tokens = new TokenService(config);
   const auth = new AuthService(ds, config, tokens, audit);
   const accounts = new AccountsService(ds, config);
-  return { audit, tokens, auth, accounts };
+  const beneficiaries = new BeneficiariesService(ds, audit);
+  return { audit, tokens, auth, accounts, beneficiaries };
 }
 
 /** Ensambla la app Express con todos los módulos (composición manual, sin framework de DI). */
@@ -43,7 +47,11 @@ export function buildApp(
     healthCheck: async () => {
       await ds.query('SELECT 1');
     },
-    routers: [auth, accountsRouter(services.accounts, requireAuth)],
+    routers: [
+      auth,
+      accountsRouter(services.accounts, requireAuth),
+      beneficiariesRouter(services.beneficiaries, requireAuth),
+    ],
   });
   return { app, services };
 }
