@@ -12,10 +12,14 @@ export function RequireAuth() {
   return <Outlet />;
 }
 
-/** Login/registro: si ya hay sesión, ir al resumen. */
+/** Login/registro: si ya hay sesión, ir a donde quería entrar el usuario (o al resumen). */
 export function RedirectIfAuthenticated() {
   const { status } = useAuth();
+  const location = useLocation();
   if (status === 'checking') return <LoadingState label="Verificando sesión" />;
-  if (status === 'authenticated') return <Navigate to="/" replace />;
+  if (status === 'authenticated') {
+    const from = (location.state as { from?: string } | null)?.from;
+    return <Navigate to={from && from.startsWith('/') ? from : '/'} replace />;
+  }
   return <Outlet />;
 }

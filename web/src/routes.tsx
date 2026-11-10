@@ -1,9 +1,11 @@
 import type { RouteObject } from 'react-router-dom';
 import { Placeholder } from './pages/Placeholder';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
 
 export const publicRoutes: RouteObject[] = [
-  { path: '/login', element: <Placeholder title="Iniciar sesión" /> },
-  { path: '/register', element: <Placeholder title="Crear cuenta" /> },
+  { path: '/login', element: <LoginPage /> },
+  { path: '/register', element: <RegisterPage /> },
 ];
 
 export const privateRoutes: RouteObject[] = [
