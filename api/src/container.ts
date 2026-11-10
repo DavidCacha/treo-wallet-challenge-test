@@ -24,13 +24,13 @@ export interface Services {
   transfers: TransfersService;
 }
 
-export function buildServices(ds: DataSource, config: AppConfig, _logger: Logger): Services {
+export function buildServices(ds: DataSource, config: AppConfig, logger: Logger): Services {
   const audit = new AuditService();
   const tokens = new TokenService(config);
   const auth = new AuthService(ds, config, tokens, audit);
   const accounts = new AccountsService(ds, config);
   const beneficiaries = new BeneficiariesService(ds, audit);
-  const transfers = new TransfersService(ds, config, audit);
+  const transfers = new TransfersService(ds, config, audit, logger);
   return { audit, tokens, auth, accounts, beneficiaries, transfers };
 }
 
