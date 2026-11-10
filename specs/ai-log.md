@@ -100,6 +100,7 @@ Los errores 1 a 7 los encontró la propia AI (con pruebas o al revisar su códig
 ### Qué no se pudo verificar
 
 - **`docker compose up`:** el entorno de la AI no tiene daemon de Docker. Solo se validó la sintaxis con `docker compose config`. Las pruebas corrieron contra un PostgreSQL 16 local preparado con el mismo script `docker/postgres/init/01-roles-and-databases.sql`.
+  - **Actualización (2026-11-10):** el candidato levantó el `docker compose` en su máquina con Windows y Docker Desktop, y ahí corrió `npm test` (51 y 103 pruebas pasaron; la suite de la API tardó unos 226 s) y `npm run dev` (la API arrancó en el puerto 3000).
 - **Node 20:** todo se ejecutó con Node 22.23. No se probó con Node 20.
 - **CI (T-29):** aún no existe el pipeline. Se hará cuando existan `web` y `mobile`, como indica `tasks.md`.
 - **Revisión humana del código:** pendiente.
