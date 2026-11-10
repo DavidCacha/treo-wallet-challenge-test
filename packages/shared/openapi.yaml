@@ -1,0 +1,631 @@
+openapi: 3.1.0
+info:
+  title: Treo Wallet API
+  version: 1.0.0
+  description: |
+    Billetera digital MXN. Todos los montos son centavos enteros (amount_cents).
+    Errores en application/problem+json (RFC 7807).
+  license:
+    name: UNLICENSED
+    identifier: UNLICENSED
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local
+tags:
+  - name: auth
+    description: Registro, sesión y tokens
+  - name: accounts
+    description: Perfil, cuentas y saldos
+  - name: beneficiaries
+    description: Beneficiarios con CLABE
+  - name: transfers
+    description: Transferencias idempotentes y OTP
+  - name: movements
+    description: Historial de movimientos
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      tags: [auth]
+      summary: Estado del servicio y de la base de datos
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [ok] }
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Registro de usuario (crea cuentas Principal y Ahorro)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Inicio de sesión
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ClientPlatform'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Sesión iniciada. En web el refresh token llega en cookie Set-Cookie y no en el cuerpo.
+          headers:
+            Set-Cookie:
+              description: Solo web. refresh_token=...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /auth/refresh:
+    post:
+      operationId: refreshTokens
+      tags: [auth]
+      summary: Rota el refresh token y emite un nuevo access token
+      security:
+        - {}
+        - refreshCookie: []
+      parameters:
+        - $ref: '#/components/parameters/ClientPlatform'
+      requestBody:
+        required: false
+        description: Solo móvil. En web el token se toma de la cookie.
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshRequest' }
+      responses:
+        '200':
+          description: Nuevo par de tokens
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Revoca el refresh token vigente
+      security:
+        - {}
+        - refreshCookie: []
+      parameters:
+        - $ref: '#/components/parameters/ClientPlatform'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshRequest' }
+      responses:
+        '204': { description: Sesión cerrada }
+  /me:
+    get:
+      operationId: getMe
+      tags: [accounts]
+      summary: Perfil, límite diario, consumo de hoy y umbral de OTP
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /accounts:
+    get:
+      operationId: listAccounts
+      tags: [accounts]
+      summary: Cuentas del usuario con saldo disponible
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Account' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /accounts/{accountId}:
+    get:
+      operationId: getAccount
+      tags: [accounts]
+      summary: Detalle de una cuenta propia
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Account' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /accounts/{accountId}/movements:
+    get:
+      operationId: listMovements
+      tags: [movements]
+      summary: Historial de movimientos paginado por cursor
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+        - name: from
+          in: query
+          description: Fecha inicial inclusiva (America/Mexico_City)
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          description: Fecha final inclusiva (America/Mexico_City)
+          schema: { type: string, format: date }
+        - name: type
+          in: query
+          schema: { $ref: '#/components/schemas/MovementType' }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: cursor
+          in: query
+          description: Cursor opaco devuelto en next_cursor
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MovementPage' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /beneficiaries:
+    get:
+      operationId: listBeneficiaries
+      tags: [beneficiaries]
+      summary: Beneficiarios del usuario
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Beneficiary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      operationId: createBeneficiary
+      tags: [beneficiaries]
+      summary: Registra un beneficiario validando la CLABE
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateBeneficiaryRequest' }
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Beneficiary' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRuleViolation' }
+  /transfers:
+    post:
+      operationId: createTransfer
+      tags: [transfers]
+      summary: Crea una transferencia (idempotente)
+      description: |
+        Repetir la petición con la misma Idempotency-Key y el mismo cuerpo no vuelve a
+        ejecutar nada: responde el estado actual de la misma transferencia (201 COMPLETED,
+        202 PENDING_OTP, 422 REJECTED/EXPIRED) con el encabezado Idempotent-Replayed: true.
+        La misma llave con otro cuerpo responde 422 IDEMPOTENCY_KEY_REUSED.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTransferRequest' }
+      responses:
+        '201':
+          description: Transferencia completada
+          headers:
+            Idempotent-Replayed: { $ref: '#/components/headers/IdempotentReplayed' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Transfer' }
+        '202':
+          description: Requiere confirmación con código de un solo uso
+          headers:
+            Idempotent-Replayed: { $ref: '#/components/headers/IdempotentReplayed' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Transfer' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: Regla de negocio incumplida (incluye la transferencia REJECTED/EXPIRED cuando aplica)
+          headers:
+            Idempotent-Replayed: { $ref: '#/components/headers/IdempotentReplayed' }
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /transfers/{transferId}:
+    get:
+      operationId: getTransfer
+      tags: [transfers]
+      summary: Estado y comprobante de una transferencia propia
+      parameters:
+        - $ref: '#/components/parameters/TransferId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Transfer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /transfers/{transferId}/confirm:
+    post:
+      operationId: confirmTransfer
+      tags: [transfers]
+      summary: Confirma una transferencia PENDING_OTP con el código
+      parameters:
+        - $ref: '#/components/parameters/TransferId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConfirmTransferRequest' }
+      responses:
+        '200':
+          description: Transferencia completada (o ya estaba completada)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Transfer' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/BusinessRuleViolation' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: refresh_token
+  parameters:
+    AccountId:
+      name: accountId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TransferId:
+      name: transferId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: UUID generado una vez por intento de transferencia
+      schema: { type: string, format: uuid }
+    ClientPlatform:
+      name: X-Client-Platform
+      in: header
+      required: true
+      schema: { type: string, enum: [web, mobile] }
+  headers:
+    IdempotentReplayed:
+      description: Presente con valor "true" cuando la respuesta es una repetición
+      schema: { type: string, enum: ['true'] }
+  schemas:
+    Cents:
+      type: integer
+      format: int64
+      description: Monto en centavos de MXN
+      minimum: -9007199254740991
+      maximum: 9007199254740991
+    Clabe:
+      type: string
+      pattern: '^[0-9]{18}$'
+    MaskedClabe:
+      type: string
+      pattern: '^\*{14}[0-9]{4}$'
+      examples: ['**************1234']
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [email, full_name, password]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        full_name: { type: string, minLength: 1, maxLength: 120 }
+        password: { type: string, minLength: 10, maxLength: 128 }
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 1, maxLength: 128 }
+    RefreshRequest:
+      type: object
+      additionalProperties: false
+      required: [refresh_token]
+      properties:
+        refresh_token: { type: string }
+    TokenResponse:
+      type: object
+      required: [access_token, token_type, expires_in]
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, enum: [Bearer] }
+        expires_in: { type: integer, description: Segundos }
+        refresh_token:
+          type: string
+          description: Solo cuando X-Client-Platform = mobile
+    User:
+      type: object
+      required: [id, email, full_name, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        full_name: { type: string }
+        created_at: { type: string, format: date-time }
+    Me:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          required: [daily_limit_cents, used_today_cents, otp_threshold_cents, business_timezone]
+          properties:
+            daily_limit_cents: { $ref: '#/components/schemas/Cents' }
+            used_today_cents: { $ref: '#/components/schemas/Cents' }
+            otp_threshold_cents: { $ref: '#/components/schemas/Cents' }
+            business_timezone: { type: string, examples: [America/Mexico_City] }
+    Account:
+      type: object
+      required: [id, name, clabe, currency, available_balance_cents, status]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        clabe: { $ref: '#/components/schemas/Clabe' }
+        currency: { type: string, const: MXN }
+        available_balance_cents: { $ref: '#/components/schemas/Cents' }
+        status: { type: string, enum: [ACTIVE, BLOCKED] }
+    CreateBeneficiaryRequest:
+      type: object
+      additionalProperties: false
+      required: [name, alias, clabe]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 80 }
+        alias: { type: string, minLength: 1, maxLength: 30 }
+        clabe: { $ref: '#/components/schemas/Clabe' }
+    Beneficiary:
+      type: object
+      required: [id, name, alias, clabe, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        alias: { type: string }
+        clabe: { $ref: '#/components/schemas/Clabe' }
+        created_at: { type: string, format: date-time }
+    CreateTransferRequest:
+      type: object
+      additionalProperties: false
+      required: [source_account_id, amount_cents, concept, reference]
+      properties:
+        source_account_id: { type: string, format: uuid }
+        beneficiary_id: { type: string, format: uuid }
+        destination_account_id:
+          type: string
+          format: uuid
+          description: Otra cuenta propia
+        amount_cents:
+          type: integer
+          minimum: 1
+          maximum: 100000000
+        concept: { type: string, minLength: 1, maxLength: 40 }
+        reference: { type: string, pattern: '^[0-9]{1,7}$' }
+      oneOf:
+        - required: [beneficiary_id]
+          not: { required: [destination_account_id] }
+        - required: [destination_account_id]
+          not: { required: [beneficiary_id] }
+    TransferStatus:
+      type: string
+      enum: [PENDING_OTP, COMPLETED, REJECTED, EXPIRED]
+    Counterparty:
+      type: object
+      required: [display_name, clabe_masked]
+      properties:
+        display_name:
+          { type: string, description: Alias del beneficiario o nombre de la cuenta propia }
+        clabe_masked: { $ref: '#/components/schemas/MaskedClabe' }
+    OtpChallenge:
+      type: object
+      required: [id, expires_at, attempts_remaining]
+      properties:
+        id: { type: string, format: uuid }
+        expires_at: { type: string, format: date-time }
+        attempts_remaining: { type: integer, minimum: 0 }
+        dev_otp_code:
+          type: string
+          pattern: '^[0-9]{6}$'
+          description: Solo existe con NODE_ENV=development
+    Transfer:
+      type: object
+      required:
+        [
+          id,
+          status,
+          kind,
+          amount_cents,
+          source_account_id,
+          destination,
+          concept,
+          reference,
+          tracking_code,
+          created_at,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/TransferStatus' }
+        kind: { type: string, enum: [P2P, OWN_ACCOUNTS] }
+        amount_cents: { $ref: '#/components/schemas/Cents' }
+        source_account_id: { type: string, format: uuid }
+        destination: { $ref: '#/components/schemas/Counterparty' }
+        concept: { type: string }
+        reference: { type: string }
+        tracking_code: { type: string, examples: [TRX20261110A1B2C3D4] }
+        rejection_code: { type: [string, 'null'] }
+        challenge:
+          oneOf:
+            - $ref: '#/components/schemas/OtpChallenge'
+            - type: 'null'
+        created_at: { type: string, format: date-time }
+        completed_at: { type: [string, 'null'], format: date-time }
+    ConfirmTransferRequest:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code: { type: string, pattern: '^[0-9]{6}$' }
+    MovementType:
+      type: string
+      enum: [TRANSFER_IN, TRANSFER_OUT, DEPOSIT]
+    Movement:
+      type: object
+      required: [id, type, amount_cents, balance_after_cents, transfer_id, created_at]
+      properties:
+        id: { type: string, description: Identificador del asiento }
+        type: { $ref: '#/components/schemas/MovementType' }
+        amount_cents:
+          $ref: '#/components/schemas/Cents'
+          description: Con signo; negativo en salidas
+        balance_after_cents: { $ref: '#/components/schemas/Cents' }
+        transfer_id: { type: string, format: uuid }
+        concept: { type: [string, 'null'] }
+        reference: { type: [string, 'null'] }
+        counterparty:
+          oneOf:
+            - $ref: '#/components/schemas/Counterparty'
+            - type: 'null'
+        created_at: { type: string, format: date-time }
+    MovementPage:
+      type: object
+      required: [data, next_cursor]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Movement' }
+        next_cursor: { type: [string, 'null'] }
+    Problem:
+      type: object
+      description: RFC 7807
+      required: [type, title, status, code, request_id]
+      properties:
+        type:
+          {
+            type: string,
+            format: uri-reference,
+            examples: ['https://treo.example/problems/insufficient-funds'],
+          }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        code: { type: string, examples: [INSUFFICIENT_FUNDS] }
+        request_id: { type: string }
+        errors:
+          type: array
+          description: Solo en errores de validación
+          items:
+            type: object
+            required: [path, message]
+            properties:
+              path: { type: string }
+              message: { type: string }
+        transfer:
+          $ref: '#/components/schemas/Transfer'
+          description: En rechazos de negocio de transferencias, la transferencia REJECTED registrada
+        attempts_remaining: { type: integer, description: Solo en OTP_INVALID }
+  responses:
+    ValidationError:
+      description: Entrada inválida
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: No autenticado o credenciales inválidas
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: No existe o no pertenece al usuario
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: Conflicto de estado o duplicado
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    BusinessRuleViolation:
+      description: Regla de negocio incumplida
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    TooManyRequests:
+      description: Demasiadas peticiones
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    ServiceUnavailable:
+      description: Contención de bloqueos tras reintentos; es seguro reintentar con la misma llave
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }

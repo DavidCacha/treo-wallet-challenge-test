@@ -1,0 +1,25 @@
+{
+  "name": "@treo/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Contrato OpenAPI, tipos generados y reglas de dominio compartidas (CLABE, montos, esquemas Zod)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "openapi.yaml"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "gen:types": "openapi-typescript openapi.yaml -o src/generated/api.ts"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.4.3"
+  }
+}
