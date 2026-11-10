@@ -8,18 +8,23 @@ import { AuditService } from './modules/audit/audit.service';
 import { AuthService } from './modules/auth/auth.service';
 import { TokenService } from './modules/auth/tokens';
 import { authRouter } from './modules/auth/auth.controller';
+import { authenticate } from './http/middleware/authenticate';
+import { AccountsService } from './modules/accounts/accounts.service';
+import { accountsRouter } from './modules/accounts/accounts.controller';
 
 export interface Services {
   audit: AuditService;
   tokens: TokenService;
   auth: AuthService;
+  accounts: AccountsService;
 }
 
 export function buildServices(ds: DataSource, config: AppConfig, _logger: Logger): Services {
   const audit = new AuditService();
   const tokens = new TokenService(config);
   const auth = new AuthService(ds, config, tokens, audit);
-  return { audit, tokens, auth };
+  const accounts = new AccountsService(ds, config);
+  return { audit, tokens, auth, accounts };
 }
 
 /** Ensambla la app Express con todos los módulos (composición manual, sin framework de DI). */
@@ -29,6 +34,7 @@ export function buildApp(
   logger: Logger,
 ): { app: Express; services: Services } {
   const services = buildServices(ds, config, logger);
+  const requireAuth = authenticate(services.tokens);
   const auth = authRouter(services.auth, config);
   const app = createApp({
     config,
@@ -37,7 +43,7 @@ export function buildApp(
     healthCheck: async () => {
       await ds.query('SELECT 1');
     },
-    routers: [auth],
+    routers: [auth, accountsRouter(services.accounts, requireAuth)],
   });
   return { app, services };
 }
