@@ -1,5 +1,6 @@
 import { Router, type Response } from 'express';
-import { clientPlatformSchema, loginSchema, registerSchema } from '@treo/shared';
+import { clientPlatformSchema, loginSchema, refreshSchema, registerSchema } from '@treo/shared';
+import type { Request } from 'express';
 import type { AppConfig } from '../../config/env';
 import { contextOf, parse } from '../../http/validate';
 import { authRateLimiter, loginRateLimiter } from '../../http/rate-limit';
@@ -68,5 +69,42 @@ export function authRouter(auth: AuthService, config: AppConfig): Router {
     sendTokens(res, config, platform, tokens);
   });
 
+  r.post('/auth/refresh', async (req, res) => {
+    const platform = platformOf(req.get('X-Client-Platform'));
+    const token = refreshTokenFrom(req, platform);
+    if (!token) throw new AppError('UNAUTHORIZED', 401, 'Refresh token requerido');
+    const tokens = await auth.refresh(token, contextOf(req));
+    sendTokens(res, config, platform, tokens);
+  });
+
+  r.post('/auth/logout', async (req, res) => {
+    const platform = platformOf(req.get('X-Client-Platform'));
+    await auth.logout(refreshTokenFrom(req, platform), contextOf(req));
+    if (platform === 'web') {
+      res.clearCookie(REFRESH_COOKIE, {
+        httpOnly: true,
+        secure: config.COOKIE_SECURE,
+        sameSite: 'strict',
+        path: REFRESH_COOKIE_PATH,
+      });
+    }
+    res.status(204).end();
+  });
+
   return r;
+}
+
+/** Web: cookie HttpOnly. Móvil: cuerpo { refresh_token }. */
+function refreshTokenFrom(req: Request, platform: 'web' | 'mobile'): string | undefined {
+  if (platform === 'web') {
+    const cookie: unknown = req.cookies?.[REFRESH_COOKIE];
+    return typeof cookie === 'string' && cookie.length > 0 ? cookie : undefined;
+  }
+  if (
+    req.body === undefined ||
+    (typeof req.body === 'object' && Object.keys(req.body).length === 0)
+  ) {
+    return undefined;
+  }
+  return parse(refreshSchema, req.body).refresh_token;
 }

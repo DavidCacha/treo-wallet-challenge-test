@@ -104,7 +104,7 @@ export class AuthService {
     }
 
     return inTransaction(this.ds, async (m) => {
-      const issued = await this.issueTokens(m, user.id, randomUUID());
+      const { refreshTokenId: _id, ...issued } = await this.issueTokens(m, user.id, randomUUID());
       await this.audit.record(m, ctx, {
         action: 'auth.login_succeeded',
         actorUserId: user.id,
@@ -115,11 +115,83 @@ export class AuthService {
     });
   }
 
+  /**
+   * R1.7, R1.8: rota el refresh token. Presentar uno ya rotado/revocado revoca toda
+   * la familia (posible robo) y se audita. La fila se bloquea (FOR UPDATE) para que
+   * dos renovaciones simultáneas no emitan dos tokens válidos.
+   */
+  async refresh(token: string, ctx: RequestContext): Promise<IssuedTokens> {
+    const outcome = await inTransaction(this.ds, async (m) => {
+      const row = await m
+        .getRepository(RefreshToken)
+        .createQueryBuilder('t')
+        .setLock('pessimistic_write')
+        .where('t.tokenHash = :hash', { hash: sha256Hex(token) })
+        .getOne();
+      if (!row) return { kind: 'invalid' as const };
+
+      if (row.revokedAt) {
+        await m
+          .createQueryBuilder()
+          .update(RefreshToken)
+          .set({ revokedAt: () => 'now()' })
+          .where('family_id = :familyId AND revoked_at IS NULL', { familyId: row.familyId })
+          .execute();
+        await this.audit.record(m, ctx, {
+          action: 'auth.refresh_reuse_detected',
+          actorUserId: row.userId,
+          entityType: 'refresh_token_family',
+          entityId: row.familyId,
+        });
+        return { kind: 'reused' as const };
+      }
+      if (row.expiresAt.getTime() <= Date.now()) return { kind: 'invalid' as const };
+
+      const { refreshTokenId, ...issued } = await this.issueTokens(m, row.userId, row.familyId);
+      await m
+        .createQueryBuilder()
+        .update(RefreshToken)
+        .set({ revokedAt: () => 'now()', replacedById: refreshTokenId })
+        .where('id = :id', { id: row.id })
+        .execute();
+      return { kind: 'ok' as const, issued };
+    });
+
+    if (outcome.kind === 'reused') {
+      throw new AppError('REFRESH_TOKEN_REUSED', 401, 'Sesión revocada; inicia sesión de nuevo');
+    }
+    if (outcome.kind === 'invalid') {
+      throw new AppError('UNAUTHORIZED', 401, 'Refresh token inválido o expirado');
+    }
+    return outcome.issued;
+  }
+
+  /** R1.9: revoca el refresh token vigente (idempotente). */
+  async logout(token: string | undefined, ctx: RequestContext): Promise<void> {
+    if (!token) return;
+    await inTransaction(this.ds, async (m) => {
+      const rows: Array<{ user_id: string }> = await m.query(
+        // CTE: TypeORM devuelve [filas, conteo] para UPDATE; un SELECT devuelve filas.
+        `WITH revoked AS (
+           UPDATE refresh_tokens SET revoked_at = now()
+            WHERE token_hash = $1 AND revoked_at IS NULL
+           RETURNING user_id
+         )
+         SELECT user_id FROM revoked`,
+        [sha256Hex(token)],
+      );
+      const userId = rows[0]?.user_id;
+      if (userId) {
+        await this.audit.record(m, ctx, { action: 'auth.logout', actorUserId: userId });
+      }
+    });
+  }
+
   private async issueTokens(
     m: EntityManager,
     userId: string,
     familyId: string,
-  ): Promise<IssuedTokens> {
+  ): Promise<IssuedTokens & { refreshTokenId: string }> {
     const refreshToken = newRefreshTokenValue();
     const inserted = await m
       .createQueryBuilder()
@@ -133,8 +205,8 @@ export class AuthService {
       })
       .returning(['id'])
       .execute();
-    void inserted;
     return {
+      refreshTokenId: (inserted.raw as Array<{ id: string }>)[0]!.id,
       accessToken: this.tokens.signAccess(userId),
       expiresIn: this.tokens.accessTtlSeconds,
       refreshToken,

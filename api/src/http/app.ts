@@ -29,7 +29,7 @@ export function createApp(opts: AppOptions): Express {
     pinoHttp({
       logger,
       genReqId: genRequestId,
-      customProps: (req) => ({ user_id: (req as { auth?: { userId: string } }).auth?.userId }),
+      customProps: (req) => ({ user_id: (req as express.Request).auth?.userId }),
       serializers: {
         req: (req: { id: unknown; method: string; url: string }) => ({
           id: req.id,

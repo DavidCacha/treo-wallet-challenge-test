@@ -13,7 +13,6 @@ export function contextOf(req: Request): RequestContext {
 
 /** userId autenticado (lo coloca el middleware authenticate). */
 export function userIdOf(req: Request): string {
-  const auth = (req as Request & { auth?: { userId: string } }).auth;
-  if (!auth) throw new Error('authenticate middleware no aplicado');
-  return auth.userId;
+  if (!req.auth) throw new Error('authenticate middleware no aplicado');
+  return req.auth.userId;
 }

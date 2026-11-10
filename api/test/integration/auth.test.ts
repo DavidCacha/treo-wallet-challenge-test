@@ -137,3 +137,72 @@ describe('login [R1.4–R1.6, R1.12, T-07]', () => {
     expect(last!.body.code).toBe('RATE_LIMITED');
   });
 });
+
+describe('refresh rotativo y logout [R1.7–R1.9, EC-11, T-08]', () => {
+  const refresh = (token: string) =>
+    request(ctx.app)
+      .post('/api/v1/auth/refresh')
+      .set('X-Client-Platform', 'mobile')
+      .send({ refresh_token: token });
+
+  it('rota el token: el nuevo funciona y el anterior deja de servir', async () => {
+    const user = await registerAndLogin(ctx.app);
+    const first = await refresh(user.refreshToken);
+    expect(first.status).toBe(200);
+    expect(first.body.refresh_token).not.toBe(user.refreshToken);
+    expect(first.body.access_token).toBeTruthy();
+    const second = await refresh(first.body.refresh_token);
+    expect(second.status).toBe(200);
+  });
+
+  it('reusar un token rotado revoca toda la familia y se audita', async () => {
+    const user = await registerAndLogin(ctx.app);
+    const rotated = await refresh(user.refreshToken);
+    const reuse = await refresh(user.refreshToken);
+    expect(reuse.status).toBe(401);
+    expect(reuse.body.code).toBe('REFRESH_TOKEN_REUSED');
+    // El token legítimo más reciente también quedó revocado.
+    const afterReuse = await refresh(rotated.body.refresh_token);
+    expect(afterReuse.status).toBe(401);
+    expect(await auditActions(user.id)).toContain('auth.refresh_reuse_detected');
+  });
+
+  it('dos renovaciones simultáneas con el mismo token no emiten dos sesiones válidas', async () => {
+    const user = await registerAndLogin(ctx.app);
+    const results = await Promise.all([refresh(user.refreshToken), refresh(user.refreshToken)]);
+    const statuses = results.map((r) => r.status).sort();
+    expect(statuses).toEqual([200, 401]);
+  });
+
+  it('web renueva con la cookie y recibe una cookie nueva', async () => {
+    const user = await registerAndLogin(ctx.app);
+    // supertest no reenvía cookies Secure sobre http; se envía manualmente.
+    const login = await request(ctx.app)
+      .post('/api/v1/auth/login')
+      .set('X-Client-Platform', 'web')
+      .send({ email: user.email, password: PASSWORD });
+    const cookie = String(login.headers['set-cookie']).split(';')[0]!;
+    const res = await request(ctx.app)
+      .post('/api/v1/auth/refresh')
+      .set('X-Client-Platform', 'web')
+      .set('Cookie', cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.refresh_token).toBeUndefined();
+    expect(String(res.headers['set-cookie'])).toMatch(/refresh_token=/);
+  });
+
+  it('logout revoca el refresh token', async () => {
+    const user = await registerAndLogin(ctx.app);
+    await request(ctx.app)
+      .post('/api/v1/auth/logout')
+      .set('X-Client-Platform', 'mobile')
+      .send({ refresh_token: user.refreshToken })
+      .expect(204);
+    expect((await refresh(user.refreshToken)).status).toBe(401);
+    expect(await auditActions(user.id)).toContain('auth.logout');
+  });
+
+  it('token inexistente → 401', async () => {
+    expect((await refresh('no-existe')).status).toBe(401);
+  });
+});
