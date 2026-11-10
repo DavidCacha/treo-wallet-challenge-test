@@ -13,6 +13,7 @@ import { AccountsService } from './modules/accounts/accounts.service';
 import { accountsRouter } from './modules/accounts/accounts.controller';
 import { BeneficiariesService } from './modules/beneficiaries/beneficiaries.service';
 import { beneficiariesRouter } from './modules/beneficiaries/beneficiaries.controller';
+import { TransfersService } from './modules/transfers/transfers.service';
 
 export interface Services {
   audit: AuditService;
@@ -20,6 +21,7 @@ export interface Services {
   auth: AuthService;
   accounts: AccountsService;
   beneficiaries: BeneficiariesService;
+  transfers: TransfersService;
 }
 
 export function buildServices(ds: DataSource, config: AppConfig, _logger: Logger): Services {
@@ -28,7 +30,8 @@ export function buildServices(ds: DataSource, config: AppConfig, _logger: Logger
   const auth = new AuthService(ds, config, tokens, audit);
   const accounts = new AccountsService(ds, config);
   const beneficiaries = new BeneficiariesService(ds, audit);
-  return { audit, tokens, auth, accounts, beneficiaries };
+  const transfers = new TransfersService(ds, config, audit);
+  return { audit, tokens, auth, accounts, beneficiaries, transfers };
 }
 
 /** Ensambla la app Express con todos los módulos (composición manual, sin framework de DI). */
