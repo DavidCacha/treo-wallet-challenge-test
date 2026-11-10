@@ -7,11 +7,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
-    "dev": "tsx watch --env-file-if-exists=.env src/server.ts",
+    "dev": "tsx watch src/server.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "db:migrate": "tsx --env-file-if-exists=.env src/db/cli/migrate.ts up",
-    "db:migrate:revert": "tsx --env-file-if-exists=.env src/db/cli/migrate.ts down",
-    "db:seed": "tsx --env-file-if-exists=.env src/db/seed/seed.ts",
+    "db:migrate": "tsx src/db/cli/migrate.ts up",
+    "db:migrate:revert": "tsx src/db/cli/migrate.ts down",
+    "db:seed": "tsx src/db/seed/seed.ts",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration"
@@ -21,6 +21,7 @@
     "argon2": "^0.41.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^5.1.0",
     "express-rate-limit": "^7.4.1",
     "helmet": "^8.0.0",

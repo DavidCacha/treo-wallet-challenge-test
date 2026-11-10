@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import 'reflect-metadata';
 import { loadConfig } from './config/env';
 import { createLogger } from './lib/logger';

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { createDataSource } from '../data-source';
 
 async function main(): Promise<void> {
