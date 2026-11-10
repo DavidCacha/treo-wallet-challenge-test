@@ -35,8 +35,8 @@ npm install
 
 # 2. PostgreSQL con roles y bases (treo y treo_test)
 docker compose up -d
-#    El contenedor publica PostgreSQL en el puerto 5433 del host, para no chocar
-#    con un PostgreSQL ya instalado en 5432. `.env.example` y las pruebas usan 5433.
+#    El contenedor publica PostgreSQL en el puerto 55432 del host, para no chocar
+#    con un PostgreSQL ya instalado (5432 o 5433). `.env.example` y las pruebas usan 55432.
 #    Sin Docker, con un PostgreSQL local y un superusuario:
 #    psql -U postgres -f docker/postgres/init/01-roles-and-databases.sql
 #    y cambia el puerto a 5432 en api/.env, TEST_DATABASE_URL y TEST_DATABASE_MIGRATION_URL.

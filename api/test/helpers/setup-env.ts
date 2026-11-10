@@ -4,8 +4,8 @@ import 'reflect-metadata';
 const defaults: Record<string, string> = {
   NODE_ENV: 'test',
   LOG_LEVEL: 'silent',
-  TEST_DATABASE_URL: 'postgres://treo_app:treo_app_dev@localhost:5433/treo_test',
-  TEST_DATABASE_MIGRATION_URL: 'postgres://treo_owner:treo_owner_dev@localhost:5433/treo_test',
+  TEST_DATABASE_URL: 'postgres://treo_app:treo_app_dev@localhost:55432/treo_test',
+  TEST_DATABASE_MIGRATION_URL: 'postgres://treo_owner:treo_owner_dev@localhost:55432/treo_test',
   JWT_SECRET: 'test-only-jwt-secret-0123456789abcdef0123456789',
   OTP_PEPPER: 'test-only-otp-pepper-0123456789abcdef0123456789',
   COOKIE_SECURE: 'true',

@@ -78,7 +78,7 @@ Los errores 1 a 7 los encontró la propia AI (con pruebas o al revisar su códig
 | 5 | El seed insertaba 60,000 transferencias en una sola transacción: **7.5 minutos**. El trigger de saldo actualiza la misma fila de `accounts` miles de veces dentro de una transacción. | Medición al correr el seed. | Lotes de 1,000 (≈16 s). Documentado en `design.md` §10. |
 | 6 | Dos commits se hicieron con un error de lint o de TypeScript, porque un `| tail` ocultaba el código de salida. | Revisión del resultado. | Se corrigieron con `--amend` antes de publicar la rama. |
 | 7 | Detalles menores: configuración de proyectos de Vitest 2.x y un parámetro SQL usado con dos tipos en un helper de pruebas. | Errores al ejecutar. | Ajustados. |
-| 8 | Publicó PostgreSQL de Docker en el puerto 5432 del host sin considerar que el revisor ya podía tener un PostgreSQL instalado ahí. | **Lo detectó el candidato** al validar en Windows: la conexión llegaba a su PostgreSQL local y fallaba la autenticación (`28P01`). | Docker Compose ahora publica en el puerto 5433; `.env.example`, las pruebas y el README se actualizaron (commit `66c65eb`). |
+| 8 | Publicó PostgreSQL de Docker en el puerto 5432 del host sin considerar que el revisor ya podía tener un PostgreSQL instalado ahí. | **Lo detectó el candidato** al validar en Windows: la conexión llegaba a su PostgreSQL local y fallaba la autenticación (`28P01`). | Docker Compose ahora publica en el puerto 55432 (primero se cambió a 5433, pero el candidato también tenía un PostgreSQL 13 escuchando ahí); `.env.example`, las pruebas y el README se actualizaron. |
 
 ### Riesgos con el dinero que la AI previno por diseño
 
