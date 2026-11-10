@@ -1,5 +1,6 @@
 import type { RouteObject } from 'react-router-dom';
 import { Placeholder } from './pages/Placeholder';
+import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 
@@ -9,7 +10,7 @@ export const publicRoutes: RouteObject[] = [
 ];
 
 export const privateRoutes: RouteObject[] = [
-  { path: '/', element: <Placeholder title="Mis cuentas" /> },
+  { path: '/', element: <DashboardPage /> },
   { path: '/accounts/:accountId/movements', element: <Placeholder title="Movimientos" /> },
   { path: '/beneficiaries', element: <Placeholder title="Beneficiarios" /> },
   { path: '/transfer', element: <Placeholder title="Transferir" /> },
