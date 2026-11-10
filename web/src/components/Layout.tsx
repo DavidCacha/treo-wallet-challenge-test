@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
+import { TransferFlowProvider } from '../transfer/TransferFlow';
 
 export function Layout() {
   const { logout } = useAuth();
@@ -37,7 +38,9 @@ export function Layout() {
         </div>
       </header>
       <main id="main" className="container" tabIndex={-1}>
-        <Outlet />
+        <TransferFlowProvider>
+          <Outlet />
+        </TransferFlowProvider>
       </main>
     </>
   );
