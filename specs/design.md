@@ -260,7 +260,7 @@ EXCEPCIONES:
 ### 5.3 Idempotencia
 
 - Encabezado `Idempotency-Key` obligatorio (UUID v4) en `POST /transfers`. Alcance: por usuario. Retención: indefinida (vive en `transfers`).
-- Misma llave + mismo hash → mismo código HTTP y mismo cuerpo, con `Idempotent-Replayed: true`. Incluye rechazos (`422`) y pendientes de OTP (`202`, mismo `challenge`; el código no se reenvía).
+- Misma llave + mismo hash → no se ejecuta nada y se responde la **misma transferencia en su estado actual**, con `Idempotent-Replayed: true`: `201` si está `COMPLETED`, `202` si sigue `PENDING_OTP` (mismo `challenge`; el código no se reenvía) y `422` si está `REJECTED`/`EXPIRED`. Mientras la transferencia no cambia de estado, la respuesta es idéntica a la original; si se confirmó con OTP, el reintento ve que ya está completada (útil para el móvil tras perder la red). *Aclaración agregada en la Fase 2; ver `ai-log.md`.*
 - Misma llave + distinto hash → `422 IDEMPOTENCY_KEY_REUSED`.
 - Peticiones concurrentes con la misma llave: el bloqueo del paso 1 las serializa; la segunda encuentra la fila en el paso 2. El `UNIQUE` cubre cualquier camino que no pase por ese bloqueo.
 - Errores de validación (`400`) y de autenticación no consumen la llave.
