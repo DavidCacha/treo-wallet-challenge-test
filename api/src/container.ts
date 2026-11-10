@@ -15,6 +15,8 @@ import { BeneficiariesService } from './modules/beneficiaries/beneficiaries.serv
 import { beneficiariesRouter } from './modules/beneficiaries/beneficiaries.controller';
 import { TransfersService } from './modules/transfers/transfers.service';
 import { transfersRouter } from './modules/transfers/transfers.controller';
+import { MovementsService } from './modules/movements/movements.service';
+import { movementsRouter } from './modules/movements/movements.controller';
 
 export interface Services {
   audit: AuditService;
@@ -23,6 +25,7 @@ export interface Services {
   accounts: AccountsService;
   beneficiaries: BeneficiariesService;
   transfers: TransfersService;
+  movements: MovementsService;
 }
 
 export function buildServices(ds: DataSource, config: AppConfig, logger: Logger): Services {
@@ -32,7 +35,8 @@ export function buildServices(ds: DataSource, config: AppConfig, logger: Logger)
   const accounts = new AccountsService(ds, config);
   const beneficiaries = new BeneficiariesService(ds, audit);
   const transfers = new TransfersService(ds, config, audit, logger);
-  return { audit, tokens, auth, accounts, beneficiaries, transfers };
+  const movements = new MovementsService(ds, config);
+  return { audit, tokens, auth, accounts, beneficiaries, transfers, movements };
 }
 
 /** Ensambla la app Express con todos los módulos (composición manual, sin framework de DI). */
@@ -56,6 +60,7 @@ export function buildApp(
       accountsRouter(services.accounts, requireAuth),
       beneficiariesRouter(services.beneficiaries, requireAuth),
       transfersRouter(services.transfers, requireAuth),
+      movementsRouter(services.movements, requireAuth),
     ],
   });
   return { app, services };
