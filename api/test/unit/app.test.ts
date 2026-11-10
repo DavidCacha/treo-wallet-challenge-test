@@ -98,3 +98,17 @@ describe('esqueleto HTTP [T-02]', () => {
     expect(out).toContain('**************0013');
   });
 });
+
+describe('documentación OpenAPI [T-04]', () => {
+  it('sirve Swagger UI en /docs y el contrato en /docs/openapi.json', async () => {
+    const { mountDocs } = await import('../../src/http/docs');
+    const config = loadConfig();
+    const app = createApp({ config, logger: createLogger('silent'), preSecurity: mountDocs });
+    const html = await request(app).get('/docs/').redirects(1);
+    expect(html.status).toBe(200);
+    expect(html.text).toContain('swagger-ui');
+    const json = await request(app).get('/docs/openapi.json');
+    expect(json.body.openapi).toBe('3.1.0');
+    expect(Object.keys(json.body.paths)).toContain('/transfers');
+  });
+});
