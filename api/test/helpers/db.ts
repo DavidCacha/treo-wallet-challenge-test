@@ -25,3 +25,21 @@ export async function sqlState(p: Promise<unknown>): Promise<string | undefined>
     return e.driverError?.code ?? e.code;
   }
 }
+
+/** Código SQLSTATE y constraint (si aplica) de una promesa que debe fallar. */
+export async function sqlError(
+  p: Promise<unknown>,
+): Promise<{ code?: string; constraint?: string } | undefined> {
+  try {
+    await p;
+    return undefined;
+  } catch (err) {
+    const e = err as {
+      code?: string;
+      constraint?: string;
+      driverError?: { code?: string; constraint?: string };
+    };
+    const src = e.driverError ?? e;
+    return { code: src.code, constraint: src.constraint };
+  }
+}
