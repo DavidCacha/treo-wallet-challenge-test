@@ -28,7 +28,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "test": "jest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:live": "jest -c jest.live.config.js --runInBand"
   },
   "private": true,
   "description": "App móvil Treo (Expo + React Native)",
@@ -41,7 +42,8 @@
       "^@treo/shared$": "<rootDir>/../packages/shared/src/index.ts"
     },
     "testPathIgnorePatterns": [
-      "/node_modules/"
+      "/node_modules/",
+      "\\.live\\.test\\.ts$"
     ],
     "moduleDirectories": [
       "node_modules",

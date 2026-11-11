@@ -47,10 +47,19 @@ export default tseslint.config(
     },
   },
   {
-    files: ['mobile/*.config.js', 'mobile/jest.setup.ts'],
+    files: ['mobile/*.config.js', 'mobile/jest.*.js', 'mobile/jest.setup.ts', 'mobile/src/live/**'],
     languageOptions: {
       sourceType: 'commonjs',
-      globals: { require: 'readonly', module: 'writable', __dirname: 'readonly' },
+      globals: {
+        require: 'readonly',
+        module: 'writable',
+        __dirname: 'readonly',
+        globalThis: 'readonly',
+        fetch: 'readonly',
+        Headers: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
+      },
     },
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
