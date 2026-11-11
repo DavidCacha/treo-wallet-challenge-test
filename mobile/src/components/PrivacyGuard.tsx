@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { AppState, StyleSheet, Text, View } from 'react-native';
+import { AppState, Platform, StyleSheet, Text, View } from 'react-native';
+import { usePreventScreenCapture } from 'expo-screen-capture';
 import type { AppStateStatus } from 'react-native';
 import { colors, space } from './theme';
 
@@ -9,7 +10,18 @@ import { colors, space } from './theme';
  * de iOS, `background` en ambas plataformas) se tapa todo el contenido para que
  * saldos y movimientos no aparezcan en la vista previa del sistema. El
  * contenido no se desmonta: la navegación y una transferencia en curso siguen.
+ * En Android además se marca la ventana como segura (ver AndroidSecureWindow).
  */
+/**
+ * Android toma la miniatura de "Recientes" antes de que AppState cambie, así que
+ * la cubierta no alcanza. FLAG_SECURE (expo-screen-capture) hace que el sistema
+ * muestre esa miniatura en blanco; también bloquea capturas de pantalla en la app.
+ */
+function AndroidSecureWindow() {
+  usePreventScreenCapture('treo-privacy');
+  return null;
+}
+
 /** Al arrancar el estado puede ser "unknown" un instante: se trata como activo. */
 function initialState(): AppStateStatus {
   const s = AppState.currentState as AppStateStatus | null;
@@ -27,6 +39,7 @@ export function PrivacyGuard({ children }: { children: ReactNode }) {
   const covered = appState !== 'active';
   return (
     <View style={styles.flex}>
+      {Platform.OS === 'android' && <AndroidSecureWindow />}
       <View
         style={styles.flex}
         aria-hidden={covered}

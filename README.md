@@ -161,6 +161,5 @@ En la web:
 
 En móvil:
 
-- Usar `expo-screen-capture` en Android para que el sistema no guarde capturas de la app en "Recientes" (hoy la cubierta depende de `AppState`).
 - Desbloqueo con biometría (`expo-local-authentication`) antes de mostrar saldos al volver a la app.
 - Probar en dispositivos reales iOS y Android de forma automatizada (Maestro o Detox) el caso de modo avión a mitad del envío.

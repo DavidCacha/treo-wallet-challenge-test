@@ -4,6 +4,7 @@ App de la billetera para iOS y Android: login, saldo de cuentas, últimos 20 mov
 
 - Expo SDK 58 (React Native 0.88, React 19.3) con TypeScript estricto.
 - Consume la misma API REST que la web (`X-Client-Platform: mobile`) y reutiliza `@treo/shared` (tipos del contrato, CLABE, montos en centavos, esquemas Zod). La app no repite reglas financieras: la API decide saldo, límite diario y OTP.
+- Privacidad: al salir de la app una cubierta tapa saldos y movimientos. En Android, además, la ventana es segura (`FLAG_SECURE`): "Recientes" muestra la miniatura en blanco y no se pueden tomar capturas de pantalla dentro de la app.
 - Tokens: el refresh token rotativo vive solo en `expo-secure-store` (Keychain / Keystore) y el access token solo en memoria. Una regla de ESLint prohíbe `AsyncStorage` en `mobile/**`.
 
 ## Correr en tu teléfono con Expo Go
@@ -74,7 +75,7 @@ Desde la raíz: `npm run test:mobile`, `npm run typecheck:mobile` y `npm run lin
 | `src/screens/HomeScreen.test.tsx` | Saldos, últimos 20 movimientos, cambio de cuenta, vacío, error con reintento, aviso sin conexión, pull-to-refresh |
 | `src/transfer/machine.test.ts` | Máquina de estados: misma llave en reintentos, backoff 1/2/4/8 s, estado desconocido tras 4 reintentos, "Verificar de nuevo", OTP, 401, doble toque |
 | `src/transfer/TransferFlow.test.tsx` | Flujo completo con la UI: envío, montos sin redondeo, saldo insuficiente, doble toque, red perdida a mitad del envío, intento pendiente al abrir la app, OTP |
-| `src/components/PrivacyGuard.test.tsx` | Cubierta de privacidad con `AppState` en `background` / `inactive` |
+| `src/components/PrivacyGuard.test.tsx` | Cubierta de privacidad con `AppState` en `background` / `inactive` y ventana segura en Android |
 | `src/lib/money.test.ts` | `formatCents` en un motor sin `Intl.NumberFormat` v3 (alternativa para Hermes) |
 | `src/live/api.live.test.ts` | Contra la API real: login y rotación, saldos y movimientos, transferencia, respuesta perdida sin duplicar, saldo insuficiente, OTP, servidor inalcanzable |
 

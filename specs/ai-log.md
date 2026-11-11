@@ -201,7 +201,7 @@ Todos los encontró la propia AI antes de abrir el PR. **El candidato todavía n
 
 ### Pruebas realmente ejecutadas
 
-- **Jest + React Native Testing Library 14 (`npm test` en `mobile/`): 46 pruebas en verde** en 7 archivos: sesión y tokens (7), login (4), inicio (5), máquina de envío (16), flujo de transferencia con la UI (9), cubierta de privacidad (3) y `formatCents` sin `Intl.NumberFormat` v3 (2).
+- **Jest + React Native Testing Library 14 (`npm test` en `mobile/`): 46 pruebas en verde** en 7 archivos: sesión y tokens (7), login (4), inicio (5), máquina de envío (16), flujo de transferencia con la UI (9), cubierta de privacidad (3; luego 5) y `formatCents` sin `Intl.NumberFormat` v3 (2).
 - Se verificó que la prueba del botón atrás falla si se vuelve a la navegación anterior.
 - **Contra la API real (`npm run test:live`): 7 pruebas en verde**, con la API en modo desarrollo y PostgreSQL 16 locales recién sembrados, usando el mismo cliente y la misma máquina que la app (solo SecureStore y NetInfo simulados): login móvil y rotación del refresh token; saldos y últimos 20 movimientos; transferencia completada con el saldo bajando exacto; respuesta perdida después de que el servidor ejecutó la transferencia, con reintento de la misma llave que recibe `Idempotent-Replayed: true` y saldo descontado una sola vez; saldo insuficiente sin cambio de saldo; OTP con el código de desarrollo; servidor inalcanzable reportado como error de conexión. Lo hizo la AI con un script; no es una revisión del candidato.
 - `npx tsc --noEmit` en `mobile/`, `npm run lint` (ESLint, Prettier y contrato OpenAPI) y `npm run typecheck` en la raíz pasan. Se comprobó que la regla de ESLint rechaza un import de AsyncStorage.
@@ -214,7 +214,11 @@ Todos los encontró la propia AI antes de abrir el PR. **El candidato todavía n
 - **La prueba manual de modo avión a mitad del envío** que pide T-27: el comportamiento está cubierto con pruebas automáticas (incluida una respuesta perdida contra la API real), pero no se probó en un dispositivo.
 - **`formatCents` en Hermes real.** Solo se simuló un motor sin `Intl.NumberFormat` v3 para probar la alternativa sin `float`. Falta verlo en un dispositivo.
 - **Lectores de pantalla** (VoiceOver, TalkBack): los componentes usan roles y etiquetas de accesibilidad, pero no se probaron con un lector real.
-- **La vista de apps recientes de Android**: la cubierta depende de `AppState`; no se comprobó si Android captura la miniatura antes del cambio de estado.
+- **La vista de apps recientes de Android**: ver "Hallazgos del candidato" abajo.
+
+### Hallazgos del candidato al probar en su teléfono
+
+- **Android mostraba los saldos en la vista de apps recientes.** El candidato probó la app en su teléfono Android con Expo Go y envió una captura de "Recientes" con los saldos visibles. Causa: Android toma la miniatura antes de que `AppState` cambie, así que la cubierta llega tarde (la AI lo había dejado como no verificado). Corrección: en Android la app marca la ventana como segura (`FLAG_SECURE` con `expo-screen-capture`), lo que deja la miniatura en blanco; efecto secundario: en Android no se pueden tomar capturas de pantalla dentro de la app. En iOS se mantiene la cubierta. Se agregaron 2 pruebas. Falta que el candidato confirme el arreglo en su teléfono.
 
 ## Fases siguientes
 

@@ -7,6 +7,7 @@
     "@tanstack/react-query": "5.62.7",
     "expo": "~58.0.23",
     "expo-crypto": "~58.0.7",
+    "expo-screen-capture": "~58.0.6",
     "expo-secure-store": "~58.0.2",
     "expo-status-bar": "~58.0.4",
     "react": "19.3.0",

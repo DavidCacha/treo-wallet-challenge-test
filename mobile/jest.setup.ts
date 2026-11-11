@@ -2,6 +2,7 @@
 jest.mock('expo-secure-store', () => require('./src/test/mocks/secureStore'));
 jest.mock('@react-native-community/netinfo', () => require('./src/test/mocks/netinfo'));
 jest.mock('expo-crypto', () => require('./src/test/mocks/expoCrypto'));
+jest.mock('expo-screen-capture', () => require('./src/test/mocks/screenCapture'));
 
 // React Query notifica en un setTimeout; se envuelve en act() para que esas
 // actualizaciones no generen advertencias fuera de act en las pruebas.

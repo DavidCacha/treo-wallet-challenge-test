@@ -1,5 +1,6 @@
 import { act, screen } from '@testing-library/react-native';
-import { AppState, Text } from 'react-native';
+import { usePreventScreenCapture } from 'expo-screen-capture';
+import { AppState, Platform, Text } from 'react-native';
 import type { AppStateStatus } from 'react-native';
 import { renderWithProviders } from '../test/helpers';
 import { PrivacyGuard } from './PrivacyGuard';
@@ -51,5 +52,18 @@ describe('PrivacyGuard [NFR-13]', () => {
     await act(async () => emit('active'));
     expect(screen.queryByTestId('privacy-cover')).not.toBeOnTheScreen();
     expect(screen.getByText('$93,249.51')).toBeVisible();
+  });
+
+  it('en Android marca la ventana como segura para que "Recientes" no muestre saldos', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    await renderWithProviders(ui);
+    expect(usePreventScreenCapture).toHaveBeenCalledWith('treo-privacy');
+  });
+
+  it('en iOS no bloquea capturas: basta la cubierta (iOS avisa "inactive" antes de la miniatura)', async () => {
+    jest.replaceProperty(Platform, 'OS', 'ios');
+    (usePreventScreenCapture as jest.Mock).mockClear();
+    await renderWithProviders(ui);
+    expect(usePreventScreenCapture).not.toHaveBeenCalled();
   });
 });
