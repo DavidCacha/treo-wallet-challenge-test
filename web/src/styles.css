@@ -327,3 +327,13 @@ dl.details dd {
   background: #fff4d6;
   color: #6b4e00;
 }
+
+.greeting {
+  margin: -0.5rem 0 0.5rem;
+  font-size: 1.1rem;
+  color: var(--muted);
+}
+.user-name {
+  font-weight: 600;
+  color: var(--muted);
+}

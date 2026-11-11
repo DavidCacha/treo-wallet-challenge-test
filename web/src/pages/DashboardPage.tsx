@@ -14,6 +14,7 @@ export function DashboardPage() {
   return (
     <section aria-labelledby="page-title">
       <h1 id="page-title">Mis cuentas</h1>
+      {me.data && <p className="greeting">Hola, {me.data.full_name}</p>}
 
       <h2>Límite diario</h2>
       {me.isPending ? (

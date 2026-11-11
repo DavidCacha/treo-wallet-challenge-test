@@ -37,6 +37,15 @@ describe('Resumen de cuentas [R2.1, R2.4, R2.5, R6.8]', () => {
     );
   });
 
+  it('saluda al usuario por su nombre y lo muestra en el encabezado', async () => {
+    renderApp('/');
+    expect(await screen.findByText('Hola, Ana Demo')).toBeInTheDocument();
+    expect(within(screen.getByRole('banner')).getByText('Ana Demo')).toHaveAttribute(
+      'title',
+      'ana@treo.dev',
+    );
+  });
+
   it('estado vacío', async () => {
     server.use(http.get(`${API}/accounts`, () => HttpResponse.json({ data: [] })));
     renderApp('/');

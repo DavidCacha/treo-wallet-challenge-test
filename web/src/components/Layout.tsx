@@ -1,10 +1,14 @@
+import { useQuery } from '@tanstack/react-query';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { getMe } from '../api/endpoints';
+import { qk } from '../api/queryKeys';
 import { useAuth } from '../auth/AuthProvider';
 import { TransferFlowProvider } from '../transfer/TransferFlow';
 
 export function Layout() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const me = useQuery({ queryKey: qk.me, queryFn: getMe });
   return (
     <>
       <a href="#main" className="skip-link">
@@ -28,6 +32,11 @@ export function Layout() {
               </li>
             </ul>
           </nav>
+          {me.data && (
+            <span className="user-name" title={me.data.email}>
+              {me.data.full_name}
+            </span>
+          )}
           <button
             type="button"
             className="btn btn-link"
