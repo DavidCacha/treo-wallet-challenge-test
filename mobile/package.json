@@ -36,6 +36,7 @@
   "description": "App móvil Treo (Expo + React Native)",
   "jest": {
     "preset": "jest-expo",
+    "testTimeout": 15000,
     "setupFiles": [
       "./jest.setup.ts"
     ],

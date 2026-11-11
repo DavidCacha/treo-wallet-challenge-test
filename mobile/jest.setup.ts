@@ -8,6 +8,7 @@ jest.mock('expo-screen-capture', () => require('./src/test/mocks/screenCapture')
 // actualizaciones no generen advertencias fuera de act en las pruebas.
 import { act } from 'react';
 import { notifyManager } from '@tanstack/react-query';
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 notifyManager.setNotifyFunction((fn) => {
   act(fn);
 });
