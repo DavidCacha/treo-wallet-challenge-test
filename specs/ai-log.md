@@ -155,7 +155,7 @@ Todos los encontró la propia AI antes de abrir el PR. **El candidato todavía n
 
 - **Navegadores distintos de Chromium** (Firefox, Safari): no se probaron.
 - **Lector de pantalla real:** solo se revisó con axe-core y con navegación por teclado en las pruebas; no se probó con NVDA ni VoiceOver.
-- **En la máquina del candidato:** está probando la web; todavía no ha revisado el código.
+- **En la máquina del candidato:** el candidato probó la web contra su API y base locales (Windows). Registró una usuaria nueva, la agregó como beneficiaria desde Ana, le transfirió $10,000.00 y confirmó que el saldo y el movimiento aparecen en la cuenta destino. La revisión del código sigue pendiente.
 
 ## Fases siguientes
 
