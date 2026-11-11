@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Variables locales (la URL de la API depende de tu red)
+.env

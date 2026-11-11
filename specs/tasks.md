@@ -69,10 +69,10 @@
 
 | ID | Tarea | Etiquetas | Requerimientos | Depende de | Verificación | Est. | Commits |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| T-25 | Expo + TS: cliente tipado, tokens en `expo-secure-store` (regla ESLint que prohíbe `AsyncStorage`), login, URL de API configurable para Expo Go; verificar `formatCents` en Hermes. | `mobile` | R1.11, R1.4 | T-04, T-08 | Login contra API local desde Expo Go/simulador; prueba que el almacenamiento usado es SecureStore. | 0.50 | |
-| T-26 | Inicio: saldo de cuentas y últimos 20 movimientos, *pull-to-refresh*, estados de carga/vacío/error/sin conexión. | `mobile` | R2.1, R2.5, R5.7 | T-25, T-16 | Prueba de componente con estados; revisión manual en simulador. | 0.25 | |
-| T-27 | Transferencia a beneficiario existente: revisión, envío con máquina de estados de §5.4 (llave persistida, NetInfo, backoff, "Verificar de nuevo"), OTP y resultado. | `mobile` | R4.16, R4.17, R6.3, EC-2 | T-26, T-14 | Prueba unitaria de la máquina: tras error de red el reintento usa la misma llave; tras 4 fallos queda en `EstadoDesconocido`; manual: modo avión a mitad del envío y luego reconexión muestra el estado real. | 0.50 | |
-| T-28 | Cubierta de privacidad al pasar a segundo plano; pruebas de la cubierta. | `mobile` | NFR-13 | T-25 | Prueba: cambiar `AppState` a `background` renderiza la cubierta y oculta saldos. | 0.25 | |
+| T-25 | Expo + TS: cliente tipado, tokens en `expo-secure-store` (regla ESLint que prohíbe `AsyncStorage`), login, URL de API configurable para Expo Go; verificar `formatCents` en Hermes. | `mobile` | R1.11, R1.4 | T-04, T-08 | Login contra API local desde Expo Go/simulador; prueba que el almacenamiento usado es SecureStore. | 0.50 | `82aa33a` |
+| T-26 | Inicio: saldo de cuentas y últimos 20 movimientos, *pull-to-refresh*, estados de carga/vacío/error/sin conexión. | `mobile` | R2.1, R2.5, R5.7 | T-25, T-16 | Prueba de componente con estados; revisión manual en simulador. | 0.25 | `b70a88b` |
+| T-27 | Transferencia a beneficiario existente: revisión, envío con máquina de estados de §5.4 (llave persistida, NetInfo, backoff, "Verificar de nuevo"), OTP y resultado. | `mobile` | R4.16, R4.17, R6.3, EC-2 | T-26, T-14 | Prueba unitaria de la máquina: tras error de red el reintento usa la misma llave; tras 4 fallos queda en `EstadoDesconocido`; manual: modo avión a mitad del envío y luego reconexión muestra el estado real. | 0.50 | `3591e84`, `cfd7923`, `dfc59bd` |
+| T-28 | Cubierta de privacidad al pasar a segundo plano; pruebas de la cubierta. | `mobile` | NFR-13 | T-25 | Prueba: cambiar `AppState` a `background` renderiza la cubierta y oculta saldos. | 0.25 | `e3999d2` |
 
 ## Transversal
 
