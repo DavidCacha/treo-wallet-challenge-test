@@ -21,8 +21,8 @@ jobs:
     name: Lint y TypeScript (api, web, shared, móvil)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -40,8 +40,8 @@ jobs:
     name: Pruebas web y shared
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -71,8 +71,8 @@ jobs:
       TEST_DATABASE_URL: postgres://treo_app:treo_app_dev@localhost:5432/treo_test
       TEST_DATABASE_MIGRATION_URL: postgres://treo_owner:treo_owner_dev@localhost:5432/treo_test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -99,8 +99,8 @@ jobs:
     name: Pruebas móvil (Jest + React Native Testing Library)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
