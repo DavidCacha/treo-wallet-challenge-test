@@ -158,11 +158,73 @@ Todos los encontró la propia AI antes de abrir el PR. **El candidato todavía n
 - **Lector de pantalla real:** solo se revisó con axe-core y con navegación por teclado en las pruebas; no se probó con NVDA ni VoiceOver.
 - **En la máquina del candidato:** el candidato probó la web contra su API y base locales (Windows). Registró una usuaria nueva, la agregó como beneficiaria desde Ana, le transfirió $10,000.00 y confirmó que el saldo y el movimiento aparecen en la cuenta destino. Después de los ajustes que pidió (referencia automática, nombre en el resumen y filtros), indicó que validó todo correctamente. La revisión del código sigue pendiente.
 
+## Fase 3b — Móvil (2026-11-11)
+
+### Herramienta y modo
+
+Claude Code (Anthropic) en la misma sesión en la nube, siguiendo `tasks.md` de T-25 a T-28 con commits por tarea. Después de cada tarea la AI corrió `tsc`, ESLint, Prettier y las pruebas de la app. La documentación de Expo (docs.expo.dev) estaba bloqueada por el proxy del entorno, así que la AI se apoyó en los tipos y la documentación incluidos en `node_modules`.
+
+### Prompt clave (escrito por el candidato)
+
+Resumen fiel:
+
+> Desarrollar la app móvil con React Native, TypeScript y Expo, cumpliendo los requisitos obligatorios: login con el JWT del backend, cuentas con saldo MXN, últimos 20 movimientos, transferencias solo a beneficiarios registrados con confirmación y resultado, y estados de carga, error y pérdida de conexión. Tokens solo en `expo-secure-store`, nunca en AsyncStorage; misma llave de idempotencia al reintentar; consultar el estado real antes de permitir otra operación cuando haya incertidumbre; evitar duplicados por doble clic; nada de `float` con dinero; ocultar información sensible en segundo plano; respetar límite diario y OTP. Usar `/mobile`, consumir la API sin duplicar lógica financiera, reutilizar tipos de `/packages/shared` y no modificar el backend salvo un problema real de integración. Ejecutar TypeScript, lint y pruebas, documentar Expo Go en Android/iOS, actualizar `ai-log.md` con honestidad y no implementar bonus.
+
+### Errores de la AI detectados y corregidos
+
+Todos los encontró la propia AI antes de abrir el PR. **El candidato todavía no ha revisado el código de la Fase 3b.**
+
+| # | Qué hizo mal la AI | Cómo se detectó | Corrección |
+| --- | --- | --- | --- |
+| 1 | La primera configuración de Metro no podía resolver `zod` al importar `@treo/shared` desde su código fuente: Metro solo ve las carpetas que vigila y `zod` estaba en `node_modules` de la raíz. Las pruebas de Jest y `tsc` pasaban, así que el error solo habría aparecido al abrir la app. | `npx expo export` (empaquetado real para Android) falló. | `zod` se agregó a `mobile/package.json` (misma versión que la raíz) y Metro la resuelve desde `mobile/node_modules`. |
+| 2 | La pantalla de revisión navegaba al estado del envío **antes** de que el intento quedara guardado en SecureStore. Si guardar fallaba, el error se perdía y la pantalla quedaba en "Enviando…" sin haber enviado nada. | Revisión propia del código. | La máquina avisa (`onPersisted`) cuando la llave y el cuerpo ya están guardados; solo entonces se navega. Si falla, se muestra el error en la revisión. |
+| 3 | En la confirmación del OTP, la primera versión trataba cualquier error no recuperable (por ejemplo un `400`) como definitivo y **borraba la llave**, aunque la transferencia siguiera pendiente en el servidor. | Revisión propia antes de escribir las pruebas. | Solo `OTP_EXPIRED`, un rechazo con `transfer` o un `401` cambian el estado; cualquier otro error deja la pantalla del código con el mensaje. |
+| 4 | Tras completar una transferencia, el botón "atrás" de Android regresaba al formulario ya enviado. | Revisión propia de la pila de navegación. | Al enviar, la pila queda como [inicio, estado]. Se agregó una prueba que falla con la versión anterior. |
+| 5 | Detalles de pruebas: una expectativa mal escrita en la prueba de renovación, advertencias `act()` de React Query y las pruebas contra la API real fallaban porque el preset de React Native reemplaza `fetch` por un mock. | Pruebas que fallaron o mostraron advertencias. | Se corrigió la expectativa; las notificaciones de React Query se envuelven en `act()`; las pruebas *live* usan un entorno que conserva el `fetch` real de Node. |
+
+### Decisiones tomadas por la AI (pendientes de revisión del candidato)
+
+| Decisión | Motivo |
+| --- | --- |
+| `/mobile` queda **fuera de los workspaces de npm**, con su propio `package-lock.json`. Esto se desvía de D-6 en `design.md` ("workspaces"). | La web usa React 18 y Expo SDK 58 exige React 19.3; dentro de los workspaces npm subiría `react-native` a la raíz y lo resolvería contra React 18. La app consume `@treo/shared` desde su código fuente (Metro, `tsconfig` y Jest), así que los tipos y reglas siguen siendo los mismos. |
+| Navegación propia por estado (una pila mínima) en lugar de React Navigation o expo-router. | Son cinco pantallas con un flujo lineal; evita dependencias nativas extra. Maneja el botón atrás de Android. |
+| Refresh token solo en SecureStore (`WHEN_UNLOCKED_THIS_DEVICE_ONLY`); access token solo en memoria. | R1.11 exige SecureStore para los tokens; el access token dura 15 minutos y no necesita persistirse. |
+| La llave se genera al tocar "Enviar" en la revisión (con `expo-crypto`), y se guarda con el cuerpo antes del primer envío. | Es el paso "Revisando → Enviando" de §5.4. En la web se genera al pasar a la confirmación; el efecto es el mismo: una llave por intento. |
+| "4 intentos fallidos" se interpretó como **4 reintentos** (1, 2, 4 y 8 s) después del primer envío, es decir 5 envíos con la misma llave antes del estado desconocido. | Es la lectura del diagrama de §5.4, donde el conteo sale del estado "Reintentando". |
+| Si se pierde la red al confirmar el OTP, la app consulta `GET /transfers/{id}` en lugar de reenviar el código. | Reenviar el código podría gastar un intento si el primero sí llegó y era incorrecto. |
+| Un `401` durante el envío no borra la llave: la sesión se cierra y, al volver a entrar, la app retoma el intento. Si entra otro usuario en el mismo teléfono, el intento guardado se descarta. | La llave solo se borra con un resultado definitivo; un intento de otro usuario no se puede retomar con su sesión. |
+| En el estado desconocido, al volver la red la app verifica sola (además del botón "Verificar de nuevo"). | §5.4 pide usar NetInfo para reanudar al recuperar la red. |
+| *Timeout* de 15 s por petición; vencido, se trata como falta de red. | Sin *timeout*, una conexión colgada dejaría la pantalla en "Enviando…" indefinidamente. |
+| `errors.ts`, `types.ts` y `format.ts` se copiaron de la web. | Son mensajes y formato de presentación, no reglas financieras. Se podrían mover a `@treo/shared` más adelante. |
+| El formulario muestra el límite diario disponible y el aviso de OTP con los datos de `/me`, pero no bloquea por límite: decide la API. | No duplicar lógica financiera en el cliente. |
+| No se modificó el backend. | No apareció ningún problema de integración: los endpoints ya devolvían el refresh token en el cuerpo para `X-Client-Platform: mobile`. |
+
+### Pruebas realmente ejecutadas
+
+- **Jest + React Native Testing Library 14 (`npm test` en `mobile/`): 46 pruebas en verde** en 7 archivos: sesión y tokens (7), login (4), inicio (5), máquina de envío (16), flujo de transferencia con la UI (9), cubierta de privacidad (3; luego 5) y `formatCents` sin `Intl.NumberFormat` v3 (2).
+- Se verificó que la prueba del botón atrás falla si se vuelve a la navegación anterior.
+- **Contra la API real (`npm run test:live`): 7 pruebas en verde**, con la API en modo desarrollo y PostgreSQL 16 locales recién sembrados, usando el mismo cliente y la misma máquina que la app (solo SecureStore y NetInfo simulados): login móvil y rotación del refresh token; saldos y últimos 20 movimientos; transferencia completada con el saldo bajando exacto; respuesta perdida después de que el servidor ejecutó la transferencia, con reintento de la misma llave que recibe `Idempotent-Replayed: true` y saldo descontado una sola vez; saldo insuficiente sin cambio de saldo; OTP con el código de desarrollo; servidor inalcanzable reportado como error de conexión. Lo hizo la AI con un script; no es una revisión del candidato.
+- `npx tsc --noEmit` en `mobile/`, `npm run lint` (ESLint, Prettier y contrato OpenAPI) y `npm run typecheck` en la raíz pasan. Se comprobó que la regla de ESLint rechaza un import de AsyncStorage.
+- `npx expo export --platform ios --platform android`: Metro empaqueta la app para ambas plataformas y la compila a bytecode de Hermes sin errores.
+- Para confirmar que no se rompió nada en el resto del repositorio: API 103, web 49 y shared 51 pruebas en verde.
+
+### Qué no se pudo verificar
+
+- **La app en Expo Go, en un simulador o en un teléfono real.** El entorno en la nube no tiene dispositivos ni simuladores. Las pruebas cubren la lógica y las pantallas en Jest, pero no el aspecto visual ni el teclado reales.
+- **La prueba manual de modo avión a mitad del envío** que pide T-27: el comportamiento está cubierto con pruebas automáticas (incluida una respuesta perdida contra la API real), pero no se probó en un dispositivo.
+- **`formatCents` en Hermes real.** Solo se simuló un motor sin `Intl.NumberFormat` v3 para probar la alternativa sin `float`. Falta verlo en un dispositivo.
+- **Lectores de pantalla** (VoiceOver, TalkBack): los componentes usan roles y etiquetas de accesibilidad, pero no se probaron con un lector real.
+- **La vista de apps recientes de Android**: ver "Hallazgos del candidato" abajo.
+
+### Hallazgos del candidato al probar en su teléfono
+
+- **Android mostraba los saldos en la vista de apps recientes.** El candidato probó la app en su teléfono Android con Expo Go y envió una captura de "Recientes" con los saldos visibles. Causa: Android toma la miniatura antes de que `AppState` cambie, así que la cubierta llega tarde (la AI lo había dejado como no verificado). Corrección: en Android la app marca la ventana como segura (`FLAG_SECURE` con `expo-screen-capture`), lo que deja la miniatura en blanco; efecto secundario: en Android no se pueden tomar capturas de pantalla dentro de la app. En iOS se mantiene la cubierta. Se agregaron 2 pruebas. El candidato confirmó en su teléfono que el arreglo funciona.
+
 ## Fases siguientes
 
 | Fase | Estado |
 | --- | --- |
-| Fase 3b — Móvil | Pendiente |
+| Fase 3b — Móvil | Implementada; pendiente de revisión del candidato |
 | Fase 4 — Propuesta AWS | Pendiente |
 
 Plantilla para cada entrada futura:

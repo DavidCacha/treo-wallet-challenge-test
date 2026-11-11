@@ -23,7 +23,10 @@
     "db:seed": "npm run db:seed -w @treo/api",
     "lint:openapi": "REDOCLY_TELEMETRY=off REDOCLY_SUPPRESS_UPDATE_NOTICE=true redocly lint packages/shared/openapi.yaml",
     "gen:types": "npm run gen:types -w @treo/shared",
-    "dev:web": "npm run dev -w @treo/web"
+    "dev:web": "npm run dev -w @treo/web",
+    "test:mobile": "npm test --prefix mobile",
+    "typecheck:mobile": "npm run typecheck --prefix mobile",
+    "dev:mobile": "npm start --prefix mobile"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",

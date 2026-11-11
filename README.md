@@ -7,7 +7,7 @@ Prueba técnica Fullstack Fintech de Treo. El proyecto se desarrolla con metodol
 | 1. Especificación (`/specs`) | ✅ Aprobada |
 | 2. Backend (`/api`, `/packages/shared`) | ✅ Implementado (T-01 a T-17) |
 | 3a. Web (`/web`) | ✅ Implementado (T-18 a T-24) |
-| 3b. Móvil (`/mobile`) | ⏳ Pendiente |
+| 3b. Móvil (`/mobile`) | ✅ Implementado (T-25 a T-28) |
 | 4. Propuesta AWS (`/docs/aws-deploy.md`) | ⏳ Pendiente |
 
 ## Estructura
@@ -22,6 +22,9 @@ Prueba técnica Fullstack Fintech de Treo. El proyecto se desarrolla con metodol
   src/api/         cliente tipado, sesión (access en memoria, refresh por cookie)
   src/pages/       login, registro, cuentas, historial, beneficiarios
   src/transfer/    formulario → confirmación → OTP → comprobante
+/mobile            app Expo (React Native + TS); paquete aparte, ver mobile/README.md
+  src/api/         cliente tipado, sesión (refresh token solo en expo-secure-store)
+  src/transfer/    máquina de envío con reintentos idempotentes y OTP
 /packages/shared   contrato OpenAPI 3.1, tipos generados, CLABE, montos y esquemas Zod
 /specs             requerimientos, diseño, tareas y bitácora de AI
 /docker            script de roles y bases de datos de PostgreSQL
@@ -66,6 +69,20 @@ npm run dev:web
 - Documentación OpenAPI navegable (Swagger UI): <http://localhost:3000/docs>
 - Contrato en JSON: <http://localhost:3000/docs/openapi.json>
 
+### App móvil con Expo Go
+
+Resumen (los detalles, simuladores y problemas comunes están en [`mobile/README.md`](./mobile/README.md)):
+
+```bash
+cd mobile
+npm install
+cp .env.example .env     # PowerShell: Copy-Item .env.example .env
+# en .env: EXPO_PUBLIC_API_URL=http://<IP-de-tu-computadora>:3000/api/v1
+npx expo start           # escanea el QR con Expo Go (misma red Wi-Fi)
+```
+
+En el teléfono `localhost` no apunta a tu computadora: usa su IP en la red local (`ipconfig` en Windows).
+
 ### Usuarios de demostración (creados por el seed)
 
 | Correo | Contraseña | Datos |
@@ -94,6 +111,8 @@ npm run test -w @treo/api -- --project unit
 npm run test -w @treo/api -- --project integration
 npm run lint                               # ESLint + Prettier + lint del contrato OpenAPI
 npm run typecheck
+npm run test:mobile                        # app móvil (Jest + React Native Testing Library, sin API)
+npm run typecheck:mobile
 ```
 
 Si tu PostgreSQL no usa las credenciales por defecto, define `TEST_DATABASE_URL` y `TEST_DATABASE_MIGRATION_URL`.
@@ -109,6 +128,7 @@ Qué cubren:
 | `transfers`, `otp`, `daily-limit` | Atomicidad, idempotencia, saldo insuficiente, límite diario con cruce de medianoche, OTP |
 | `concurrency` | 100 transferencias simultáneas que cuadran al centavo, transferencias A↔B sin deadlocks, misma llave ×20 |
 | `movements` | Paginación por cursor sin duplicados ni omisiones, filtros y validación |
+| `mobile/src/**/*.test.ts(x)` | Sesión en SecureStore, login, inicio con estados, máquina de envío (misma llave, backoff, estado desconocido, OTP), flujo de transferencia con red perdida, cubierta de privacidad. Detalle en [`mobile/README.md`](./mobile/README.md) |
 | `web/src/**/*.test.tsx` | Sesión con *single-flight*, login/registro (401/409/429, teclado), cuentas, historial con cursor y filtros, beneficiarios con CLABE en vivo y el flujo de transferencia (doble clic, misma llave en reintentos, saldo insuficiente, OTP) |
 
 ## Scripts
@@ -117,6 +137,7 @@ Qué cubren:
 | --- | --- |
 | `npm run dev` | API con recarga (tsx watch) |
 | `npm run dev:web` | Panel web con Vite en el puerto 5173 |
+| `npm run dev:mobile` | Metro para la app móvil (antes: `npm install` dentro de `mobile/` y `EXPO_PUBLIC_API_URL`, ver [`mobile/README.md`](./mobile/README.md)) |
 | `npm run build` / `npm start -w @treo/api` | Compila y corre la versión compilada |
 | `npm run db:migrate` / `npm run db:migrate:revert` | Aplica o revierte migraciones (rol dueño) |
 | `npm run db:seed` | Datos de demostración (idempotente) |
@@ -137,3 +158,8 @@ En la web:
 - Al abrir otra pestaña, avisar si hay un intento de transferencia sin resultado en la primera (hoy el intento vive en el `sessionStorage` de cada pestaña).
 - Agregar pruebas de punta a punta con Playwright en CI contra la API real.
 - Avisar en pantalla cuando el OTP está por vencer, con una cuenta regresiva.
+
+En móvil:
+
+- Desbloqueo con biometría (`expo-local-authentication`) antes de mostrar saldos al volver a la app.
+- Probar en dispositivos reales iOS y Android de forma automatizada (Maestro o Detox) el caso de modo avión a mitad del envío.
