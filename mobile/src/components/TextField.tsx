@@ -1,12 +1,5 @@
-
 import { useState } from 'react';
-import {
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  Pressable,
-} from 'react-native';
+import { StyleSheet, Text, TextInput, View, Pressable } from 'react-native';
 import type { TextInputProps } from 'react-native';
 import { colors, space } from './theme';
 
@@ -16,14 +9,7 @@ interface Props extends TextInputProps {
   hint?: string;
 }
 
-export function TextField({
-  label,
-  error,
-  hint,
-  style,
-  secureTextEntry,
-  ...input
-}: Props) {
+export function TextField({ label, error, hint, style, secureTextEntry, ...input }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = secureTextEntry === true;
 
@@ -42,9 +28,7 @@ export function TextField({
             error ? styles.inputError : null,
             style,
           ]}
-          secureTextEntry={
-            isPassword ? !showPassword : secureTextEntry
-          }
+          secureTextEntry={isPassword ? !showPassword : secureTextEntry}
           {...input}
         />
 
@@ -52,16 +36,12 @@ export function TextField({
           <Pressable
             onPress={() => setShowPassword((current) => !current)}
             accessibilityRole="button"
-            accessibilityLabel={
-              showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'
-            }
+            accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             accessibilityState={{ selected: showPassword }}
             style={styles.toggle}
             hitSlop={8}
           >
-            <Text style={styles.toggleText}>
-              {showPassword ? '◉' : '◎'}
-            </Text>
+            <Text style={styles.toggleText}>{showPassword ? '◉' : '◎'}</Text>
           </Pressable>
         )}
       </View>

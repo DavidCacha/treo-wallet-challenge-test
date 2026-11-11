@@ -150,7 +150,7 @@ function BeneficiaryForm({
       <FormAlert>{formError}</FormAlert>
       <TextField
         label="Nombre"
-        placeholder='Nombre completo'
+        placeholder="Nombre completo"
         autoComplete="off"
         error={errors.name?.message}
         {...register('name')}
@@ -158,7 +158,7 @@ function BeneficiaryForm({
       <TextField
         label="Alias"
         autoComplete="off"
-        placeholder='Mi mejor amigo'
+        placeholder="Mi mejor amigo"
         hint="Máximo 30 caracteres. Así lo verás al transferir."
         error={errors.alias?.message}
         {...register('alias')}
@@ -167,7 +167,7 @@ function BeneficiaryForm({
         label="CLABE"
         inputMode="numeric"
         autoComplete="off"
-        placeholder='*************7845'
+        placeholder="*************7845"
         maxLength={18}
         hint={<span aria-live="polite">{clabeHint(clabe)}</span>}
         error={errors.clabe?.message}

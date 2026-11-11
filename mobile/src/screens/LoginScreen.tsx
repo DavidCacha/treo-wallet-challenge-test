@@ -58,13 +58,13 @@ export function LoginScreen() {
         autoComplete="email"
         keyboardType="email-address"
         textContentType="username"
-        placeholder='user@treo.com'
+        placeholder="user@treo.com"
         error={errors.email}
       />
       <TextField
         label="Contraseña"
         value={password}
-        placeholder='Contraseña'
+        placeholder="Contraseña"
         onChangeText={setPassword}
         secureTextEntry
         autoComplete="password"
