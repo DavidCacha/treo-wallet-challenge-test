@@ -78,9 +78,9 @@
 
 | ID | Tarea | Etiquetas | Requerimientos | Depende de | Verificación | Est. | Commits |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| T-29 | GitHub Actions: lint + pruebas de `api` (con PostgreSQL de servicio, migraciones y concurrencia), `web` y `mobile`; cache de npm. | `api` `web` `mobile` | NFR-15 | T-15, T-24, T-28 | Pipeline en verde en la rama principal. | 0.25 | |
-| T-30 | `/docs/aws-deploy.md`: diagrama Mermaid, cómputo, base de datos (Multi-AZ, PITR, RPO/RTO), web, móvil, observabilidad y auditoría, CI/CD con OIDC, conexiones (RDS Proxy), crecimiento 100×, IaC. | `api` `web` `mobile` | Fase 4 | T-17 | Revisión contra la tabla de la Fase 4: todos los temas y preguntas respondidos. | 0.50 | |
-| T-31 | `README.md`: correr en local, pruebas, Expo Go/simulador, credenciales demo, "qué haría con más tiempo"; actualizar `ai-log.md`. | `api` `web` `mobile` | NFR-14, NFR-16 | T-29, T-30 | Seguir el README desde un clon limpio levanta API, base con seed y web. | 0.25 | |
+| T-29 | GitHub Actions: lint + pruebas de `api` (con PostgreSQL de servicio, migraciones y concurrencia), `web` y `mobile`; cache de npm. | `api` `web` `mobile` | NFR-15 | T-15, T-24, T-28 | Pipeline en verde en la rama principal. | 0.25 || `eecb9bd`, `15f16d4` |
+| T-30 | `/docs/aws-deploy.md`: diagrama Mermaid, cómputo, base de datos (Multi-AZ, PITR, RPO/RTO), web, móvil, observabilidad y auditoría, CI/CD con OIDC, conexiones (RDS Proxy), crecimiento 100×, IaC. | `api` `web` `mobile` | Fase 4 | T-17 | Revisión contra la tabla de la Fase 4: todos los temas y preguntas respondidos. | 0.50 || `2a21d80` |
+| T-31 | `README.md`: correr en local, pruebas, Expo Go/simulador, credenciales demo, "qué haría con más tiempo"; actualizar `ai-log.md`. | `api` `web` `mobile` | NFR-14, NFR-16 | T-29, T-30 | Seguir el README desde un clon limpio levanta API, base con seed y web. | 0.25 || `3d4bb95` |
 
 ## Bonus (fuera del presupuesto, solo si sobra tiempo)
 
