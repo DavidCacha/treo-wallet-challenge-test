@@ -49,6 +49,11 @@ const MESSAGES: Record<string, string> = {
   VALIDATION_ERROR: 'Revisa los datos capturados.',
 };
 
+/** Mensaje en español para un código de error o de rechazo de la API. */
+export function messageForCode(code: string | null | undefined): string {
+  return (code && MESSAGES[code]) || 'Ocurrió un error inesperado. Inténtalo de nuevo.';
+}
+
 /** Mensaje en español para mostrar al usuario a partir de cualquier error. */
 export function messageFor(error: unknown): string {
   if (error instanceof NetworkError) {

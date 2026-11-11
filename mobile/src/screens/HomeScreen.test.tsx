@@ -1,6 +1,6 @@
 import { act, screen, userEvent } from '@testing-library/react-native';
-import { HomeScreen } from './HomeScreen';
 import { AuthProvider } from '../auth/AuthContext';
+import { AppRoot } from '../AppRoot';
 import { __resetSessionForTests } from '../api/session';
 import { KEYS } from '../api/secureStorage';
 import {
@@ -16,7 +16,7 @@ import { accounts, me, movement } from '../test/fixtures';
 
 const home = () => (
   <AuthProvider>
-    <HomeScreen />
+    <AppRoot />
   </AuthProvider>
 );
 

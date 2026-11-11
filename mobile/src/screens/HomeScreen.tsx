@@ -5,14 +5,19 @@ import * as api from '../api/endpoints';
 import { qk } from '../api/queryKeys';
 import { useAuth } from '../auth/AuthContext';
 import { AccountCard } from '../components/AccountCard';
+import { Button } from '../components/Button';
 import { MovementItem } from '../components/MovementItem';
 import { Screen } from '../components/Screen';
-import { EmptyState, ErrorState, LoadingState } from '../components/States';
+import { EmptyState, ErrorState, LoadingState, Notice } from '../components/States';
 import { colors, space } from '../components/theme';
+import { useNav } from '../navigation';
+import { useTransfer } from '../transfer/TransferContext';
 
 /** R2.1 (saldos), R5.7 (últimos 20 movimientos), R2.5 (carga/vacío/error), sin conexión. */
 export function HomeScreen() {
   const { logout } = useAuth();
+  const nav = useNav();
+  const transfer = useTransfer();
   const me = useQuery({ queryKey: qk.me, queryFn: api.getMe });
   const accounts = useQuery({ queryKey: qk.accounts, queryFn: api.getAccounts });
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -54,6 +59,25 @@ export function HomeScreen() {
           onPress={() => setSelectedId(a.id)}
         />
       ))}
+      {transfer.pending && (
+        <Notice tone="warning" title="Tienes una transferencia en proceso">
+          <Text>Antes de hacer otra operación confirmamos con el servidor si se realizó.</Text>
+          <Button
+            title="Ver estado"
+            variant="secondary"
+            onPress={() => nav.push({ name: 'transferStatus' })}
+          />
+        </Notice>
+      )}
+      {accounts.data && accounts.data.length > 0 && !transfer.pending && (
+        <View style={styles.actions}>
+          <Button
+            title="Transferir"
+            disabled={!transfer.ready}
+            onPress={() => nav.push({ name: 'transferForm' })}
+          />
+        </View>
+      )}
       {selected && (
         <Text style={styles.section} accessibilityRole="header">
           Últimos movimientos · {selected.name}
@@ -108,5 +132,6 @@ const styles = StyleSheet.create({
     marginTop: space.md,
     marginBottom: space.sm,
   },
+  actions: { marginVertical: space.sm },
   link: { color: colors.primary, fontWeight: '600', fontSize: 16, padding: space.xs },
 });

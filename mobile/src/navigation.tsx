@@ -1,13 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { BackHandler } from 'react-native';
+import type { TransferDraft, TransferFormValues } from './transfer/draft';
 
 /**
  * Navegación mínima por estado (pila). La app tiene pocas pantallas y un flujo
  * lineal; una librería de navegación agregaría dependencias nativas sin aportar
  * a los requisitos.
  */
-export type Route = { name: 'home' };
+export type Route =
+  | { name: 'home' }
+  | { name: 'transferForm'; values?: TransferFormValues }
+  | { name: 'transferReview'; draft: TransferDraft }
+  | { name: 'transferStatus'; values?: TransferFormValues };
 
 interface Nav {
   route: Route;
