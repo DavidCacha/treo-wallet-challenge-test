@@ -13,7 +13,6 @@ import { space } from '../components/theme';
 import { useNav } from '../navigation';
 import { generateReference, validateTransfer } from '../transfer/draft';
 import type { FormErrors, TransferFormValues } from '../transfer/draft';
-import { Placeholder } from '../../../web/src/pages/Placeholder';
 
 /** R4.16: solo a beneficiarios registrados. R6.8: aviso de código. Montos sin float. */
 export function TransferFormScreen({ initial }: { initial?: TransferFormValues }) {
