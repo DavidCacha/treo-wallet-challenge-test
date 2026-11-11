@@ -209,3 +209,6 @@ Infraestructura:
 
 - Escribir el esqueleto en CDK de la propuesta de AWS y un workflow de despliegue con OIDC.
 - Agregar análisis de dependencias y de secretos en CI (Dependabot, CodeQL y gitleaks).
+
+## Video en ejecución de la aplicación mobile y web
+Url del video: https://drive.google.com/file/d/1RA6EdPpYelFINfGS5Ahcr8JHn6WOdd7l/view?usp=sharing
