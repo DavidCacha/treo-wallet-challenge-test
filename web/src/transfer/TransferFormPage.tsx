@@ -19,6 +19,12 @@ const AMOUNT_ERRORS: Record<ParseMoneyError, string> = {
   OUT_OF_RANGE: 'El monto excede el máximo por transferencia',
 };
 
+/** Referencia numérica de 7 dígitos generada al azar (el usuario puede cambiarla). */
+export function generateReference(): string {
+  const [n] = crypto.getRandomValues(new Uint32Array(1));
+  return String(1_000_000 + ((n ?? 0) % 9_000_000));
+}
+
 type Errors = Partial<Record<keyof TransferFormValues, string>>;
 
 const FIELD_OF: Record<string, keyof TransferFormValues> = {
@@ -110,7 +116,7 @@ function TransferForm({
       destination: pre && beneficiaries.some((b) => b.id === pre) ? `b:${pre}` : '',
       amount: '',
       concept: '',
-      reference: '',
+      reference: generateReference(),
     };
     // Solo al montar: después manda lo que escriba el usuario.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -250,11 +256,20 @@ function TransferForm({
         inputMode="numeric"
         maxLength={7}
         autoComplete="off"
-        hint="De 1 a 7 dígitos."
+        hint="Se genera automáticamente; puedes cambiarla (de 1 a 7 dígitos)."
         value={values.reference}
         onChange={set('reference')}
         error={errors.reference}
       />
+      <div>
+        <button
+          type="button"
+          className="btn btn-link"
+          onClick={() => setValues((v) => ({ ...v, reference: generateReference() }))}
+        >
+          Generar otra referencia
+        </button>
+      </div>
 
       <div className="actions">
         <button type="submit" className="btn btn-primary">

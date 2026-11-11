@@ -355,6 +355,28 @@ describe('Flujo de transferencia web [R4.5, R4.14, R4.15, R6.3, EC-1, EC-3]', ()
     );
   });
 
+  it('la referencia viene generada (7 dígitos), se puede regenerar y es la que se envía', async () => {
+    const t = transfer();
+    serveTransfer(t);
+    const calls = transfersEndpoint(() => HttpResponse.json(t, { status: 201 }));
+    const user = userEvent.setup();
+    rendered = renderApp('/transfer');
+    const ref = await screen.findByLabelText('Referencia numérica');
+    expect((ref as HTMLInputElement).value).toMatch(/^[1-9]\d{6}$/);
+
+    await user.click(screen.getByRole('button', { name: 'Generar otra referencia' }));
+    const generated = (ref as HTMLInputElement).value;
+    expect(generated).toMatch(/^[1-9]\d{6}$/);
+
+    await user.selectOptions(screen.getByLabelText('Destino'), `b:${beneficiaries[0]!.id}`);
+    await user.type(screen.getByLabelText('Monto (MXN)'), '50');
+    await user.type(screen.getByLabelText('Concepto'), 'Comida');
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await user.click(await screen.findByRole('button', { name: 'Enviar' }));
+    await screen.findByRole('heading', { name: 'Transferencia completada' });
+    expect(calls[0]!.body).toMatchObject({ reference: generated });
+  });
+
   it('sin beneficiarios ni otra cuenta: ofrece agregar un beneficiario', async () => {
     server.use(
       http.get(`${API}/beneficiaries`, () => HttpResponse.json({ data: [] })),
