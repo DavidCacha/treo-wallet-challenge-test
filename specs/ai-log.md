@@ -218,7 +218,7 @@ Todos los encontró la propia AI antes de abrir el PR. **El candidato todavía n
 
 ### Hallazgos del candidato al probar en su teléfono
 
-- **Android mostraba los saldos en la vista de apps recientes.** El candidato probó la app en su teléfono Android con Expo Go y envió una captura de "Recientes" con los saldos visibles. Causa: Android toma la miniatura antes de que `AppState` cambie, así que la cubierta llega tarde (la AI lo había dejado como no verificado). Corrección: en Android la app marca la ventana como segura (`FLAG_SECURE` con `expo-screen-capture`), lo que deja la miniatura en blanco; efecto secundario: en Android no se pueden tomar capturas de pantalla dentro de la app. En iOS se mantiene la cubierta. Se agregaron 2 pruebas. Falta que el candidato confirme el arreglo en su teléfono.
+- **Android mostraba los saldos en la vista de apps recientes.** El candidato probó la app en su teléfono Android con Expo Go y envió una captura de "Recientes" con los saldos visibles. Causa: Android toma la miniatura antes de que `AppState` cambie, así que la cubierta llega tarde (la AI lo había dejado como no verificado). Corrección: en Android la app marca la ventana como segura (`FLAG_SECURE` con `expo-screen-capture`), lo que deja la miniatura en blanco; efecto secundario: en Android no se pueden tomar capturas de pantalla dentro de la app. En iOS se mantiene la cubierta. Se agregaron 2 pruebas. El candidato confirmó en su teléfono que el arreglo funciona.
 
 ## Fases siguientes
 
