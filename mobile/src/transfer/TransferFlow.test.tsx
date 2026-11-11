@@ -1,4 +1,5 @@
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { BackHandler } from 'react-native';
 import { AppRoot } from '../AppRoot';
 import { AuthProvider } from '../auth/AuthContext';
 import { __resetSessionForTests } from '../api/session';
@@ -268,5 +269,32 @@ describe('flujo de transferencia móvil [R4.16, R4.17, R6.3]', () => {
     expect(await screen.findByText('Transferencia completada')).toBeOnTheScreen();
     await waitFor(() => expect(secureStore().has(KEYS.pendingTransfer)).toBe(false));
     expect(calls.filter((c) => c.url.endsWith('/confirm'))).toHaveLength(2);
+  });
+});
+
+describe('navegación tras enviar', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('"Atrás" desde el resultado vuelve al inicio, no al formulario enviado', async () => {
+    type BackListener = Parameters<typeof BackHandler.addEventListener>[1];
+    const handlers: BackListener[] = [];
+    jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_e, h) => {
+      handlers.push(h);
+      return { remove: () => handlers.splice(handlers.indexOf(h), 1) };
+    });
+    mockFetch(
+      routes([{ method: 'POST', path: '/transfers', handler: () => json(transfer(), 201) }]),
+    );
+    const user = userEvent.setup();
+    await renderWithProviders(app());
+    await fillForm(user);
+    await user.press(await screen.findByRole('button', { name: 'Enviar' }));
+    expect(await screen.findByText('Transferencia completada')).toBeOnTheScreen();
+
+    // Botón "atrás" de Android: el último manejador registrado es el vigente.
+    await act(async () => {
+      handlers[handlers.length - 1]?.({} as never);
+    });
+    expect(await screen.findByRole('button', { name: 'Transferir' })).toBeOnTheScreen();
   });
 });

@@ -136,7 +136,15 @@ export function TransferStatusScreen({ values }: { values?: TransferFormValues }
             maxLength={6}
             error={codeError}
           />
-          <Button title="Confirmar" onPress={submit} loading={confirming} />
+          <View style={styles.actions}>
+            <Button title="Confirmar" onPress={submit} loading={confirming} />
+            <Button
+              title="Volver al inicio"
+              variant="secondary"
+              disabled={confirming}
+              onPress={() => nav.reset({ name: 'home' })}
+            />
+          </View>
         </Screen>
       );
     }

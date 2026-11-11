@@ -26,7 +26,10 @@ export function TransferReviewScreen({ draft }: { draft: TransferDraft }) {
     sending.current = true;
     setBusy(true);
     try {
-      await start(draft, () => nav.replace({ name: 'transferStatus', values: draft.values }));
+      // "Atrás" desde el estado vuelve al inicio, no al formulario ya enviado.
+      await start(draft, () =>
+        nav.reset([{ name: 'home' }, { name: 'transferStatus', values: draft.values }]),
+      );
     } catch {
       // Solo falla si no se pudo guardar el intento en SecureStore: no se envió nada.
       sending.current = false;

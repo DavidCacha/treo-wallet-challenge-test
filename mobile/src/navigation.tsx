@@ -19,7 +19,8 @@ interface Nav {
   push: (r: Route) => void;
   replace: (r: Route) => void;
   back: () => void;
-  reset: (r: Route) => void;
+  /** Reemplaza toda la pila (una ruta o varias, la última queda visible). */
+  reset: (r: Route | Route[]) => void;
   canGoBack: boolean;
 }
 
@@ -30,7 +31,7 @@ export function NavigationProvider({ initial, children }: { initial: Route; chil
   const push = useCallback((r: Route) => setStack((s) => [...s, r]), []);
   const replace = useCallback((r: Route) => setStack((s) => [...s.slice(0, -1), r]), []);
   const back = useCallback(() => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s)), []);
-  const reset = useCallback((r: Route) => setStack([r]), []);
+  const reset = useCallback((r: Route | Route[]) => setStack(Array.isArray(r) ? r : [r]), []);
   const route = stack[stack.length - 1] ?? initial;
   const canGoBack = stack.length > 1;
 
