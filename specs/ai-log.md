@@ -220,12 +220,70 @@ Todos los encontró la propia AI antes de abrir el PR. **El candidato todavía n
 
 - **Android mostraba los saldos en la vista de apps recientes.** El candidato probó la app en su teléfono Android con Expo Go y envió una captura de "Recientes" con los saldos visibles. Causa: Android toma la miniatura antes de que `AppState` cambie, así que la cubierta llega tarde (la AI lo había dejado como no verificado). Corrección: en Android la app marca la ventana como segura (`FLAG_SECURE` con `expo-screen-capture`), lo que deja la miniatura en blanco; efecto secundario: en Android no se pueden tomar capturas de pantalla dentro de la app. En iOS se mantiene la cubierta. Se agregaron 2 pruebas. El candidato confirmó en su teléfono que el arreglo funciona.
 
+## Fase 4 — CI, propuesta AWS y revisión final (2026-11-11)
+
+### Herramienta y modo
+
+Claude Code (Anthropic) en la misma sesión en la nube. Antes de cambiar archivos, la AI releyó el documento original de la prueba, `/specs`, el código de `api`, `web` y `mobile` y el historial de commits.
+
+### Prompt clave (escrito por el candidato)
+
+Resumen fiel:
+
+> Realizar la Fase 4 y la revisión final: auditar cada requisito del documento original contra la implementación (matriz con archivo, estado, prueba y acción, sin marcar nada completo sin evidencia), validar el backend, completar y ejecutar las pruebas obligatorias, crear `/docs/aws-deploy.md` sin desplegar nada, configurar GitHub Actions, completar el README y el ai-log sin inventar revisiones humanas, revisar el control de versiones y los secretos, y entregar la matriz, las pruebas reales, los problemas corregidos, lo pendiente, el estado del CI, las instrucciones locales y un guion de video de 5 minutos.
+
+### Qué hizo la AI
+
+- **T-29:** workflow de CI con cuatro jobs: lint y TypeScript; shared y web; API con PostgreSQL 16 de servicio, migraciones y seed; y móvil.
+- **T-30:** `docs/aws-deploy.md`, con el diagrama Mermaid validado con mermaid-cli.
+- **T-31:** README final y `docs/requirements-audit.md` con la matriz de cumplimiento.
+- **Revisión de secretos:** solo hay archivos `*.env.example` en Git, y una búsqueda de patrones de llaves (AWS, GitHub, llaves privadas) en todo el historial no encontró nada.
+- **Revisión de trazabilidad:** T-00 a T-31 tienen commits. Las specs (`b1525ab`) son anteriores al primer commit de código (`efb1a22`), y los cuatro PR se fusionaron con merge commit, sin squash.
+
+### Errores o ajustes detectados
+
+| # | Qué pasó | Cómo se detectó | Corrección |
+| --- | --- | --- | --- |
+| 1 | La primera versión del workflow usaba `actions/checkout@v4` y `actions/setup-node@v4`, que corren con Node 20, obsoleto en los runners de GitHub. | Advertencia en el log de la primera corrida del CI (que sí pasó). | Se actualizaron a v5. |
+| 2 | Al empezar la fase, la AI intentó un `push --force` de la rama de trabajo; el modo automático lo bloqueó. No hacía falta: la rama remota estaba contenida en `main` y bastó un push normal. | Bloqueo del clasificador de permisos. | Push normal, sin reescribir historial. |
+
+No se encontraron requisitos obligatorios del código sin implementar. Lo que falta está en "Qué no se pudo verificar".
+
+### Decisiones tomadas por la AI (pendientes de revisión del candidato)
+
+| Decisión | Motivo |
+| --- | --- |
+| ECS Fargate para la API; Aurora PostgreSQL Multi-AZ con Global Database. | Proceso persistente con pool y transacciones con bloqueos; conmutación rápida y DR con RPO de segundos. RDS PostgreSQL Multi-AZ queda como alternativa válida. |
+| Región principal `mx-central-1`. | Residencia de datos en México; es una propuesta que cumplimiento debe validar. |
+| Retención de auditoría de 10 años. | Alineada con la conservación de registros mercantiles; marcada en el documento como supuesto a validar. |
+| Web y API en el mismo dominio detrás de CloudFront. | Mantiene la cookie del refresh `SameSite=Strict`, como en el diseño actual. |
+| El CI verifica el seed (≥ 100,000 asientos) además de las pruebas. | El requisito del seed es obligatorio y así queda probado en cada PR. |
+| Cognito como evolución, no implementado. | Era opcional en la prueba; se explica en `docs/aws-deploy.md` §12. |
+
+### Pruebas realmente ejecutadas
+
+En el entorno de la AI (Node 22, PostgreSQL 16.15), el 2026-11-11:
+
+- `npm run lint`, `npm run typecheck` y `npm run typecheck:mobile`: pasan.
+- shared 51, API 103 (incluye 100 transferencias simultáneas que cuadran al centavo, idempotencia, límite diario y saldo no negativo), web 49 y móvil 48 pruebas, todas en verde.
+- Móvil contra la API real (`npm run test:live`): 7 en verde.
+- Migraciones y seed en una base limpia sin `api/.env` (como en CI): 120,016 asientos en unos 17 s. `EXPLAIN (ANALYZE, BUFFERS)` de la primera página del historial con el rol `treo_app`: `Index Only Scan` sobre `ledger_entries_history_idx`, 4 buffers y 0.097 ms, igual que lo documentado en `design.md` §10.
+- Swagger UI responde en `/docs` (200) y `/docs/openapi.json` declara OpenAPI 3.1.0.
+- **GitHub Actions:** la primera corrida en el PR #5 terminó con los 4 jobs en verde. Lo comprobó la AI con la API de GitHub; las corridas posteriores se registran en el PR.
+
+### Qué no se pudo verificar
+
+- **El CI en verde en `main`:** solo se puede ver después de que el candidato haga merge.
+- **El video de 5 minutos:** lo graba el candidato.
+- **La app en iOS:** no se probó en un dispositivo ni en un simulador. En Android, el candidato abrió la app con Expo Go y confirmó el arreglo de privacidad; las demás pruebas manuales en el dispositivo (modo avión a mitad del envío) no están confirmadas.
+- **La propuesta de AWS no se desplegó** (la prueba lo prohíbe) ni la revisó un especialista; los supuestos regulatorios deben validarse.
+
 ## Fases siguientes
 
 | Fase | Estado |
 | --- | --- |
-| Fase 3b — Móvil | Implementada; pendiente de revisión del candidato |
-| Fase 4 — Propuesta AWS | Pendiente |
+| Fase 3b — Móvil | Fusionada (PR #4); el candidato la abrió en Android con Expo Go |
+| Fase 4 — CI, propuesta AWS y revisión final | Implementada; pendiente de revisión del candidato |
 
 Plantilla para cada entrada futura:
 

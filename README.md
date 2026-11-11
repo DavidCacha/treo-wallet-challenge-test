@@ -8,7 +8,7 @@ Prueba técnica Fullstack Fintech de Treo. El proyecto se desarrolla con metodol
 | 2. Backend (`/api`, `/packages/shared`) | ✅ Implementado (T-01 a T-17) |
 | 3a. Web (`/web`) | ✅ Implementado (T-18 a T-24) |
 | 3b. Móvil (`/mobile`) | ✅ Implementado (T-25 a T-28) |
-| 4. Propuesta AWS (`/docs/aws-deploy.md`) | ⏳ Pendiente |
+| 4. Propuesta AWS (`/docs/aws-deploy.md`) y CI | ✅ Documentada (T-29 a T-31) |
 
 ## Estructura
 
@@ -28,12 +28,21 @@ Prueba técnica Fullstack Fintech de Treo. El proyecto se desarrolla con metodol
 /packages/shared   contrato OpenAPI 3.1, tipos generados, CLABE, montos y esquemas Zod
 /specs             requerimientos, diseño, tareas y bitácora de AI
 /docker            script de roles y bases de datos de PostgreSQL
+/docs              propuesta de despliegue en AWS y auditoría de requisitos
+/.github/workflows CI: lint, TypeScript y pruebas de api, web, shared y móvil
 ```
+
+Documentos clave:
+
+- [`docs/aws-deploy.md`](./docs/aws-deploy.md): propuesta de producción en AWS (sin desplegar).
+- [`docs/requirements-audit.md`](./docs/requirements-audit.md): cada requisito de la prueba con su implementación, estado y la prueba que lo demuestra.
+- [`specs/`](./specs): requerimientos, diseño (incluye el `EXPLAIN ANALYZE` en §10), tareas con sus commits y bitácora de AI.
 
 ## Requisitos
 
-- Node.js 20 o superior (probado con Node 22) y npm 10.
+- Node.js 20 o superior (probado con Node 22) y npm 10. La app móvil y sus pruebas piden Node 22.13 o superior (React Native Testing Library 14).
 - PostgreSQL 15 o superior. Puedes usar el `docker-compose.yml` incluido (PostgreSQL 16) o un PostgreSQL local.
+- Para la app móvil: Expo Go en un teléfono Android o iOS en la misma red Wi-Fi, o un emulador o simulador.
 
 ## Cómo correr en local
 
@@ -83,6 +92,24 @@ npx expo start           # escanea el QR con Expo Go (misma red Wi-Fi)
 
 En el teléfono `localhost` no apunta a tu computadora: usa su IP en la red local (`ipconfig` en Windows).
 
+### Variables de entorno
+
+La API lee `api/.env` (copia de [`.env.example`](./.env.example), con valores solo para desarrollo). Las principales:
+
+| Variable | Para qué | Valor de desarrollo |
+| --- | --- | --- |
+| `DATABASE_URL` | Conexión de la API (rol `treo_app`) | `postgres://treo_app:treo_app_dev@localhost:55432/treo` |
+| `DATABASE_MIGRATION_URL` | Migraciones (rol `treo_owner`) | `postgres://treo_owner:treo_owner_dev@localhost:55432/treo` |
+| `TEST_DATABASE_URL`, `TEST_DATABASE_MIGRATION_URL` | Base `treo_test` de las pruebas de integración | Igual con `/treo_test` |
+| `JWT_SECRET`, `OTP_PEPPER` | Firma de tokens y HMAC del código de un solo uso | Cadenas de desarrollo; en producción vendrían de Secrets Manager |
+| `ACCESS_TOKEN_TTL_SECONDS`, `REFRESH_TOKEN_TTL_DAYS` | Vigencia del access token (900 s) y del refresh token (7 días) | — |
+| `DEFAULT_DAILY_LIMIT_CENTS`, `OTP_THRESHOLD_CENTS` | Límite diario ($50,000.00) y monto que exige código ($10,000.00) | `5000000`, `1000000` |
+| `BUSINESS_TIMEZONE` | Zona del día del límite | `America/Mexico_City` |
+| `LOGIN_RATE_LIMIT_MAX`, `LOGIN_RATE_LIMIT_WINDOW_MS` | Intentos de login permitidos por ventana | 5 cada 15 min |
+| `CORS_ORIGINS` | Orígenes web permitidos | `http://localhost:5173` |
+
+La web usa `VITE_API_URL` (opcional, ver [`web/.env.example`](./web/.env.example)) y la app móvil `EXPO_PUBLIC_API_URL` (ver [`mobile/.env.example`](./mobile/.env.example)). Ningún `.env` real está en Git.
+
 ### Usuarios de demostración (creados por el seed)
 
 | Correo | Contraseña | Datos |
@@ -113,7 +140,19 @@ npm run lint                               # ESLint + Prettier + lint del contra
 npm run typecheck
 npm run test:mobile                        # app móvil (Jest + React Native Testing Library, sin API)
 npm run typecheck:mobile
+cd mobile && npm run test:live             # app móvil contra la API local real (API corriendo + seed)
 ```
+
+Resultados de la última corrida completa (2026-11-11): shared 51, API 103 (incluye 100 transferencias simultáneas), web 49, móvil 48 y móvil contra la API real 7, todas en verde.
+
+### Integración continua
+
+[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) corre en cada PR y en cada push a `main`, con cuatro jobs:
+
+- Lint (ESLint, Prettier y contrato OpenAPI) y TypeScript de todos los proyectos.
+- Pruebas de shared y web, más la build de la web.
+- Pruebas de la API con PostgreSQL 16 como servicio, y luego migraciones y seed verificando al menos 100,000 asientos.
+- Pruebas de la app móvil.
 
 Si tu PostgreSQL no usa las credenciales por defecto, define `TEST_DATABASE_URL` y `TEST_DATABASE_MIGRATION_URL`.
 
@@ -145,21 +184,28 @@ Qué cubren:
 
 ## Qué haría con más tiempo
 
-Esta lista se completará al cerrar las fases 3 y 4. Por ahora, en el backend:
+Backend:
 
-- Mover el rate limit a Redis o WAF para que funcione con varias réplicas. Hoy vive en memoria.
-- Agregar el envío real del OTP (SMS o correo) con un proveedor y plantillas.
-- Agregar una tarea programada que marque como `EXPIRED` los OTP vencidos sin esperar a que el usuario intente confirmar.
-- Agregar una conciliación periódica entre saldo y suma de asientos, con alertas. Hoy la base impide la divergencia y las pruebas la verifican.
-- Particionar `ledger_entries` por fecha cuando el volumen lo requiera.
+- Mover el rate limit a Redis o a WAF para que funcione con varias réplicas. Hoy vive en memoria de cada proceso.
+- Enviar el OTP de verdad (SMS o correo) con un proveedor y plantillas.
+- Agregar una tarea programada que marque como `EXPIRED` los OTP vencidos, sin esperar a que el usuario intente confirmar.
+- Conciliar a diario saldo contra suma de asientos, con alertas. Hoy la base impide la divergencia y las pruebas lo verifican.
+- Particionar `ledger_entries` por mes cuando el volumen lo requiera.
+- Evaluar Amazon Cognito para MFA y recuperación de cuenta ([`docs/aws-deploy.md`](./docs/aws-deploy.md) §12).
 
-En la web:
+Web:
 
-- Al abrir otra pestaña, avisar si hay un intento de transferencia sin resultado en la primera (hoy el intento vive en el `sessionStorage` de cada pestaña).
+- Avisar en otra pestaña si hay un intento de transferencia sin resultado (hoy el intento vive en el `sessionStorage` de cada pestaña).
 - Agregar pruebas de punta a punta con Playwright en CI contra la API real.
-- Avisar en pantalla cuando el OTP está por vencer, con una cuenta regresiva.
+- Mostrar una cuenta regresiva cuando el OTP está por vencer.
 
-En móvil:
+Móvil:
 
-- Desbloqueo con biometría (`expo-local-authentication`) antes de mostrar saldos al volver a la app.
-- Probar en dispositivos reales iOS y Android de forma automatizada (Maestro o Detox) el caso de modo avión a mitad del envío.
+- Desbloqueo biométrico (`expo-local-authentication`) antes de mostrar saldos al volver a la app (bonus de la prueba).
+- Probar en dispositivos reales, de forma automatizada (Maestro o Detox), el modo avión a mitad del envío, en iOS y Android.
+- Agregar App Attest y Play Integrity para validar que las peticiones vienen de la app legítima.
+
+Infraestructura:
+
+- Escribir el esqueleto en CDK de la propuesta de AWS y un workflow de despliegue con OIDC.
+- Agregar análisis de dependencias y de secretos en CI (Dependabot, CodeQL y gitleaks).

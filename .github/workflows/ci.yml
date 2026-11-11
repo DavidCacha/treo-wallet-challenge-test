@@ -1,0 +1,113 @@
+# CI de la billetera: lint, tipos y pruebas de api, web, móvil y shared (NFR-15, T-29).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  lint-and-typecheck:
+    name: Lint y TypeScript (api, web, shared, móvil)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            mobile/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix mobile
+      # ESLint + Prettier sobre todo el repo (incluye mobile/) y lint del contrato OpenAPI.
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run typecheck:mobile
+
+  test-web-shared:
+    name: Pruebas web y shared
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm test -w @treo/shared
+      - run: npm test -w @treo/web
+      - run: npm run build -w @treo/web
+
+  test-api:
+    name: Pruebas API (unitarias + integración con PostgreSQL 16)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          # Solo para el contenedor efímero de CI; no es un secreto real.
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      TEST_DATABASE_URL: postgres://treo_app:treo_app_dev@localhost:5432/treo_test
+      TEST_DATABASE_MIGRATION_URL: postgres://treo_owner:treo_owner_dev@localhost:5432/treo_test
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Roles y bases (mismo script que docker compose)
+        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f docker/postgres/init/01-roles-and-databases.sql
+      - run: npm ci
+      # Incluye idempotencia, límite diario, saldo no negativo y 100 transferencias concurrentes.
+      - run: npm test -w @treo/api
+      - name: Migraciones y seed (≥ 100,000 movimientos) en base limpia
+        env:
+          NODE_ENV: development
+          DATABASE_URL: postgres://treo_app:treo_app_dev@localhost:5432/treo
+          DATABASE_MIGRATION_URL: postgres://treo_owner:treo_owner_dev@localhost:5432/treo
+          JWT_SECRET: ci-only-jwt-secret-0123456789abcdef0123456789
+          OTP_PEPPER: ci-only-otp-pepper-0123456789abcdef0123456789
+        run: |
+          npm run db:migrate
+          npm run db:seed
+          psql -h localhost -U postgres -d treo -v ON_ERROR_STOP=1 -tAc \
+            "SELECT CASE WHEN count(*) >= 100000 THEN 'ok: ' || count(*) ELSE 'pocos asientos: ' || count(*) END FROM ledger_entries" \
+            | tee /dev/stderr | grep -q '^ok'
+
+  test-mobile:
+    name: Pruebas móvil (Jest + React Native Testing Library)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            mobile/package-lock.json
+      # La app consume @treo/shared desde su código fuente.
+      - run: npm ci
+      - run: npm ci --prefix mobile
+      - run: npm test --prefix mobile -- --ci
