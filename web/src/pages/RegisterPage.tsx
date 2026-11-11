@@ -55,6 +55,7 @@ export function RegisterPage() {
         <TextField
           label="Nombre completo"
           autoComplete="name"
+          placeholder='Nombre Completo'
           error={errors.full_name?.message}
           {...register('full_name')}
         />
@@ -62,12 +63,14 @@ export function RegisterPage() {
           label="Correo electrónico"
           type="email"
           autoComplete="email"
+          placeholder='user@treo.com'
           error={errors.email?.message}
           {...register('email')}
         />
         <TextField
           label="Contraseña"
           type="password"
+          placeholder='Contraseña'
           autoComplete="new-password"
           hint="Mínimo 10 caracteres."
           error={errors.password?.message}

@@ -34,7 +34,7 @@ export function AccountCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
-    borderRadius: 12,
+    borderRadius: 18,
     padding: space.md,
     marginBottom: space.sm,
     borderWidth: 2,
