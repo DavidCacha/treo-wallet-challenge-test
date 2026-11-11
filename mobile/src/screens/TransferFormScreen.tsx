@@ -143,6 +143,7 @@ export function TransferFormScreen({ initial }: { initial?: TransferFormValues }
       <TextField
         label="Concepto"
         value={values.concept}
+        placeholder="Pago del prestamo"
         onChangeText={set('concept')}
         maxLength={40}
         error={errors.concept}

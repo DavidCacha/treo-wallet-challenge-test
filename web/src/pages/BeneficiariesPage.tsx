@@ -3,13 +3,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { createBeneficiarySchema, isValidClabe } from '@treo/shared';
 import type { CreateBeneficiaryInput } from '@treo/shared';
 import * as api from '../api/endpoints';
 import { isApiError, messageFor } from '../api/errors';
 import { qk } from '../api/queryKeys';
 import { TextField } from '../components/Field';
 import { EmptyState, ErrorState, FormAlert, LoadingState } from '../components/States';
+import { createBeneficiarySchema, isValidClabe, maskClabe } from '@treo/shared';
 
 /** Errores de negocio de la API que pertenecen al campo CLABE. */
 const CLABE_ERRORS = new Set([
@@ -89,7 +89,7 @@ export function BeneficiariesPage() {
               <span>
                 <strong>{b.alias}</strong> <span className="muted">· {b.name}</span>
                 <br />
-                <span className="muted">CLABE {b.clabe}</span>
+                <span className="muted">CLABE {maskClabe(b.clabe)}</span>
               </span>
               <Link to={`/transfer?beneficiary=${b.id}`}>
                 Transferir<span className="visually-hidden"> a {b.alias}</span>
@@ -150,6 +150,7 @@ function BeneficiaryForm({
       <FormAlert>{formError}</FormAlert>
       <TextField
         label="Nombre"
+        placeholder="Nombre completo"
         autoComplete="off"
         error={errors.name?.message}
         {...register('name')}
@@ -157,6 +158,7 @@ function BeneficiaryForm({
       <TextField
         label="Alias"
         autoComplete="off"
+        placeholder="Mi mejor amigo"
         hint="Máximo 30 caracteres. Así lo verás al transferir."
         error={errors.alias?.message}
         {...register('alias')}
@@ -165,6 +167,7 @@ function BeneficiaryForm({
         label="CLABE"
         inputMode="numeric"
         autoComplete="off"
+        placeholder="*************7845"
         maxLength={18}
         hint={<span aria-live="polite">{clabeHint(clabe)}</span>}
         error={errors.clabe?.message}

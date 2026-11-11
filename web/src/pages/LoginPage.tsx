@@ -37,12 +37,14 @@ export function LoginPage() {
         <TextField
           label="Correo electrónico"
           type="email"
+          placeholder="user@treo.com"
           autoComplete="email"
           error={errors.email?.message}
           {...register('email')}
         />
         <TextField
           label="Contraseña"
+          placeholder="Contraseña"
           type="password"
           autoComplete="current-password"
           error={errors.password?.message}

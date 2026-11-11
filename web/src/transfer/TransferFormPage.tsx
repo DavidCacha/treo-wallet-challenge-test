@@ -248,6 +248,7 @@ function TransferForm({
         autoComplete="off"
         value={values.concept}
         onChange={set('concept')}
+        placeholder="Pago de la tanda"
         error={errors.concept}
       />
       <TextField
