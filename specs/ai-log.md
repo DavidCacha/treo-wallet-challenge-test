@@ -137,9 +137,13 @@ Todos los encontró la propia AI antes de abrir el PR. **El candidato todavía n
 | Un rechazo de negocio no ofrece "Reintentar", solo "Corregir datos" (con llave nueva). | La llave ya quedó consumida por el rechazo; reenviarla devolvería el mismo resultado. Los errores de red y `5xx` sí se reintentan con la misma llave. |
 | Se agregó una guardia síncrona además del botón deshabilitado. | Evita dos envíos aunque lleguen dos clics antes de que React vuelva a pintar. |
 
+### Cambios pedidos por el candidato
+
+- Al probar la web en su máquina, el candidato pidió que la referencia numérica se generara automáticamente. Ahora se llena con 7 dígitos al azar, se puede cambiar o regenerar, y se valida igual que antes (commit `d5bb53d`).
+
 ### Pruebas realmente ejecutadas
 
-- **Vitest + Testing Library + MSW (`npm test -w @treo/web`): 46 pruebas en verde** en 7 archivos: sesión y *single-flight* (5), `RequireAuth` (2), login y registro (9), cuentas (4), historial (6), beneficiarios (6) y flujo de transferencia (14).
+- **Vitest + Testing Library + MSW (`npm test -w @treo/web`): 47 pruebas en verde** en 7 archivos: sesión y *single-flight* (5), `RequireAuth` (2), login y registro (9), cuentas (4), historial (6), beneficiarios (6) y flujo de transferencia (15).
 - Se verificó que las pruebas del flujo fallan si se quita la guardia de doble clic o si se genera una llave nueva en cada envío.
 - **Prueba en navegador contra la API real** (Chromium con Playwright, API y PostgreSQL 16 locales, usuario demo): login y sesión tras recargar (cookie `HttpOnly`, `SameSite=Strict`, nada en `localStorage`/`sessionStorage`), transferencia completada con doble clic (1 sola petición `POST /transfers`, el saldo bajó $50.00), OTP inválido (quedan 2 intentos) y válido, `100.005` rechazado sin enviar, saldo insuficiente (mensaje, sin comprobante), historial con filtro en la URL, "Cargar más" con el usuario `historial@` (20 → 40) y rango vacío, CLABE con dígito erróneo y CLABE externa, logout. Lo hizo la AI con un script; no es una revisión del candidato.
 - **axe-core 4.10 (WCAG 2 A/AA)** en login, registro, cuentas, historial, beneficiarios y transferencia (con errores de validación visibles): sin violaciones. Incluye contraste de color.
@@ -150,7 +154,7 @@ Todos los encontró la propia AI antes de abrir el PR. **El candidato todavía n
 
 - **Navegadores distintos de Chromium** (Firefox, Safari): no se probaron.
 - **Lector de pantalla real:** solo se revisó con axe-core y con navegación por teclado en las pruebas; no se probó con NVDA ni VoiceOver.
-- **En la máquina del candidato:** pendiente.
+- **En la máquina del candidato:** está probando la web; todavía no ha revisado el código.
 
 ## Fases siguientes
 
