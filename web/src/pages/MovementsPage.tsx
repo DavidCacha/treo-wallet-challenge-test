@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import type { FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { movementsQuerySchema, movementTypeSchema } from '@treo/shared';
@@ -59,7 +58,6 @@ export function MovementsPage() {
       )}
 
       <Filters
-        key={params.toString()}
         initial={filters}
         onApply={(next) => {
           const p = new URLSearchParams();
@@ -148,17 +146,31 @@ function Filters({
   const [type, setType] = useState<string>(initial.type ?? '');
   const [error, setError] = useState<string | null>(null);
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    const candidate = {
-      from: from || undefined,
-      to: to || undefined,
-      type: (type || undefined) as MovementType | undefined,
+  // Si la URL cambia por fuera (atrás/adelante del navegador), se sincroniza.
+  useEffect(() => {
+    setFrom(initial.from ?? '');
+    setTo(initial.to ?? '');
+    setType(initial.type ?? '');
+  }, [initial.from, initial.to, initial.type]);
+
+  /** Se aplica en cuanto cambia un campo; mismas reglas que la API (from ≤ to). */
+  const apply = (next: { from: string; to: string; type: string }) => {
+    setFrom(next.from);
+    setTo(next.to);
+    setType(next.type);
+    const candidate: MovementFilters = {
+      from: next.from || undefined,
+      to: next.to || undefined,
+      type: (next.type || undefined) as MovementType | undefined,
     };
-    // Mismas reglas que la API (from ≤ to, fechas válidas).
     const parsed = movementsQuerySchema.safeParse(candidate);
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Filtros inválidos');
+      const issue = parsed.error.issues[0];
+      setError(
+        issue?.path[0] === 'from' && next.from && next.to
+          ? 'La fecha "Desde" no puede ser posterior a "Hasta".'
+          : (issue?.message ?? 'Filtros inválidos'),
+      );
       return;
     }
     setError(null);
@@ -166,43 +178,50 @@ function Filters({
   };
 
   return (
-    <form onSubmit={submit} aria-label="Filtros" className="card" style={{ marginBottom: 16 }}>
+    <form
+      onSubmit={(e) => e.preventDefault()}
+      aria-label="Filtros"
+      className="card"
+      style={{ marginBottom: 16 }}
+    >
       <FormAlert>{error}</FormAlert>
       <div className="filters">
         <TextField
           label="Desde"
           type="date"
           value={from}
-          onChange={(e) => setFrom(e.target.value)}
+          onChange={(e) => apply({ from: e.target.value, to, type })}
         />
-        <TextField label="Hasta" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-        <SelectField label="Tipo" value={type} onChange={(e) => setType(e.target.value)}>
+        <TextField
+          label="Hasta"
+          type="date"
+          value={to}
+          onChange={(e) => apply({ from, to: e.target.value, type })}
+        />
+        <SelectField
+          label="Tipo"
+          value={type}
+          onChange={(e) => apply({ from, to, type: e.target.value })}
+        >
           <option value="">Todos</option>
           <option value="TRANSFER_IN">Recibidas</option>
           <option value="TRANSFER_OUT">Enviadas</option>
           <option value="DEPOSIT">Depósitos</option>
         </SelectField>
         <div className="field">
-          <button type="submit" className="btn btn-primary">
-            Aplicar filtros
-          </button>
-        </div>
-        <div className="field">
           <button
             type="button"
-            className="btn btn-link"
-            onClick={() => {
-              setFrom('');
-              setTo('');
-              setType('');
-              setError(null);
-              onApply({});
-            }}
+            className="btn btn-secondary"
+            disabled={!from && !to && !type}
+            onClick={() => apply({ from: '', to: '', type: '' })}
           >
-            Limpiar
+            Limpiar filtros
           </button>
         </div>
       </div>
+      <p className="field-hint" style={{ marginTop: 4 }}>
+        Los filtros se aplican al cambiarlos.
+      </p>
     </form>
   );
 }

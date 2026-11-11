@@ -73,8 +73,8 @@ describe('Historial [R5.3, R5.8]', () => {
     await user.click(screen.getByRole('button', { name: 'Cargar más' }));
     await waitFor(() => expect(seen).toHaveLength(2));
 
+    // Se aplica al elegir, sin botón extra.
     await user.selectOptions(screen.getByLabelText('Tipo'), 'DEPOSIT');
-    await user.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
 
     await waitFor(() => expect(router.state.location.search).toBe('?type=DEPOSIT'));
     const list = await screen.findByRole('list', { name: 'Movimientos' });
@@ -100,10 +100,25 @@ describe('Historial [R5.3, R5.8]', () => {
     renderApp(path);
     await screen.findByRole('list', { name: 'Movimientos' });
     await user.type(screen.getByLabelText('Desde'), '2026-11-10');
+    await waitFor(() => expect(seen.at(-1)).toMatchObject({ from: '2026-11-10' }));
+    const before = seen.length;
     await user.type(screen.getByLabelText('Hasta'), '2026-11-01');
-    await user.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('`from` no puede ser posterior');
-    expect(seen).toHaveLength(1);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'La fecha "Desde" no puede ser posterior a "Hasta".',
+    );
+    expect(seen).toHaveLength(before);
+  });
+
+  it('"Limpiar filtros" vuelve a la lista completa', async () => {
+    const seen: Seen[] = [];
+    server.use(pagedHandler(seen));
+    const user = userEvent.setup();
+    const { router } = renderApp(`${path}?type=DEPOSIT`);
+    await screen.findByText(/Depósito inicial/);
+    await user.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+    await waitFor(() => expect(router.state.location.search).toBe(''));
+    expect(await screen.findByText(/Pago 0/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Tipo')).toHaveValue('');
   });
 
   it('estado vacío con filtros', async () => {
