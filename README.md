@@ -6,7 +6,8 @@ Prueba técnica Fullstack Fintech de Treo. El proyecto se desarrolla con metodol
 | --- | --- |
 | 1. Especificación (`/specs`) | ✅ Aprobada |
 | 2. Backend (`/api`, `/packages/shared`) | ✅ Implementado (T-01 a T-17) |
-| 3. Web (`/web`) y móvil (`/mobile`) | ⏳ Pendiente |
+| 3a. Web (`/web`) | ✅ Implementado (T-18 a T-24) |
+| 3b. Móvil (`/mobile`) | ⏳ Pendiente |
 | 4. Propuesta AWS (`/docs/aws-deploy.md`) | ⏳ Pendiente |
 
 ## Estructura
@@ -17,6 +18,10 @@ Prueba técnica Fullstack Fintech de Treo. El proyecto se desarrolla con metodol
   src/db/          entidades, migraciones (SQL crudo donde TypeORM no alcanza), seed
   test/unit        pruebas unitarias
   test/integration pruebas contra PostgreSQL real (incluye concurrencia)
+/web               panel web React 18 + Vite + TanStack Query
+  src/api/         cliente tipado, sesión (access en memoria, refresh por cookie)
+  src/pages/       login, registro, cuentas, historial, beneficiarios
+  src/transfer/    formulario → confirmación → OTP → comprobante
 /packages/shared   contrato OpenAPI 3.1, tipos generados, CLABE, montos y esquemas Zod
 /specs             requerimientos, diseño, tareas y bitácora de AI
 /docker            script de roles y bases de datos de PostgreSQL
@@ -50,6 +55,13 @@ npm run db:seed
 npm run dev
 ```
 
+En otra terminal, el panel web:
+
+```bash
+npm run dev:web
+```
+
+- Web: <http://localhost:5173> (Vite redirige `/api` a la API, así la cookie del refresh es del mismo origen)
 - API: <http://localhost:3000/api/v1>
 - Documentación OpenAPI navegable (Swagger UI): <http://localhost:3000/docs>
 - Contrato en JSON: <http://localhost:3000/docs/openapi.json>
@@ -76,7 +88,8 @@ Se usan dos roles con permisos mínimos (`design.md` §3.2):
 Las pruebas de integración usan la base `treo_test`. Esa base se reinicia en cada corrida, así que PostgreSQL debe estar levantado (paso 2).
 
 ```bash
-npm test                                   # todo: shared + api (unitarias e integración)
+npm test                                   # todo: shared + api (unitarias e integración) + web
+npm run test -w @treo/web                  # solo web (Vitest + Testing Library + MSW, sin API)
 npm run test -w @treo/api -- --project unit
 npm run test -w @treo/api -- --project integration
 npm run lint                               # ESLint + Prettier + lint del contrato OpenAPI
@@ -96,12 +109,14 @@ Qué cubren:
 | `transfers`, `otp`, `daily-limit` | Atomicidad, idempotencia, saldo insuficiente, límite diario con cruce de medianoche, OTP |
 | `concurrency` | 100 transferencias simultáneas que cuadran al centavo, transferencias A↔B sin deadlocks, misma llave ×20 |
 | `movements` | Paginación por cursor sin duplicados ni omisiones, filtros y validación |
+| `web/src/**/*.test.tsx` | Sesión con *single-flight*, login/registro (401/409/429, teclado), cuentas, historial con cursor y filtros, beneficiarios con CLABE en vivo y el flujo de transferencia (doble clic, misma llave en reintentos, saldo insuficiente, OTP) |
 
 ## Scripts
 
 | Script | Qué hace |
 | --- | --- |
 | `npm run dev` | API con recarga (tsx watch) |
+| `npm run dev:web` | Panel web con Vite en el puerto 5173 |
 | `npm run build` / `npm start -w @treo/api` | Compila y corre la versión compilada |
 | `npm run db:migrate` / `npm run db:migrate:revert` | Aplica o revierte migraciones (rol dueño) |
 | `npm run db:seed` | Datos de demostración (idempotente) |
@@ -116,3 +131,9 @@ Esta lista se completará al cerrar las fases 3 y 4. Por ahora, en el backend:
 - Agregar una tarea programada que marque como `EXPIRED` los OTP vencidos sin esperar a que el usuario intente confirmar.
 - Agregar una conciliación periódica entre saldo y suma de asientos, con alertas. Hoy la base impide la divergencia y las pruebas la verifican.
 - Particionar `ledger_entries` por fecha cuando el volumen lo requiera.
+
+En la web:
+
+- Al abrir otra pestaña, avisar si hay un intento de transferencia sin resultado en la primera (hoy el intento vive en el `sessionStorage` de cada pestaña).
+- Agregar pruebas de punta a punta con Playwright en CI contra la API real.
+- Avisar en pantalla cuando el OTP está por vencer, con una cuenta regresiva.

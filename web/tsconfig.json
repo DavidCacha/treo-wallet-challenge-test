@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom/vitest"],
+    "noEmit": true,
+    "declaration": false,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": { "@treo/shared": ["../packages/shared/src/index.ts"] }
+  },
+  "include": ["src", "vite.config.ts"]
+}

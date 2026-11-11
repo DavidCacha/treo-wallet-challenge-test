@@ -5,13 +5,14 @@
   "description": "Billetera digital MXN (prueba técnica Treo): API, web y móvil",
   "workspaces": [
     "packages/shared",
-    "api"
+    "api",
+    "web"
   ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "build": "npm run build -w @treo/shared && npm run build -w @treo/api",
+    "build": "npm run build -w @treo/shared && npm run build -w @treo/api && npm run build -w @treo/web",
     "lint": "eslint . && prettier --check . && npm run lint:openapi",
     "format": "prettier --write .",
     "typecheck": "npm run typecheck --workspaces --if-present",
@@ -21,7 +22,8 @@
     "db:migrate:revert": "npm run db:migrate:revert -w @treo/api",
     "db:seed": "npm run db:seed -w @treo/api",
     "lint:openapi": "REDOCLY_TELEMETRY=off REDOCLY_SUPPRESS_UPDATE_NOTICE=true redocly lint packages/shared/openapi.yaml",
-    "gen:types": "npm run gen:types -w @treo/shared"
+    "gen:types": "npm run gen:types -w @treo/shared",
+    "dev:web": "npm run dev -w @treo/web"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
@@ -29,6 +31,7 @@
     "@types/node": "^20.17.6",
     "eslint": "^9.15.0",
     "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react-hooks": "5.1.0",
     "prettier": "^3.3.3",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.15.0",
